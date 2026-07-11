@@ -8,7 +8,7 @@ type PythonResponse = {
   error?: string;
 };
 
-const PYTHON_TIMEOUT_MS = 65000;
+const PYTHON_TIMEOUT_MS = 110000;
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -36,7 +36,7 @@ function runPythonSimulation(text: string, model: string, lifeProfile: unknown):
     cwd: engineRoot,
     env: {
       ...process.env,
-      BRUJULA_OLLAMA_TIMEOUT: process.env.BRUJULA_OLLAMA_TIMEOUT || "6",
+      BRUJULA_OLLAMA_TIMEOUT: process.env.BRUJULA_OLLAMA_TIMEOUT || "20",
       PYTHONIOENCODING: "utf-8"
     },
     stdio: ["pipe", "pipe", "pipe"]

@@ -33,24 +33,30 @@ class OllamaClient:
                 f"Modelos disponibles: {available}. Instálalo con: ollama pull {self.model}"
             )
 
-    def chat(self, messages: List[Dict[str, str]], temperature: float = 0.35) -> str:
+    def chat(self, messages: List[Dict[str, str]], temperature: float = 0.35, num_predict: int | None = None) -> str:
+        options = {"temperature": temperature}
+        if num_predict:
+            options["num_predict"] = num_predict
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": options,
         }
         raw = self._request("POST", "/api/chat", payload)
         content = raw.get("message", {}).get("content", "")
         return re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
 
-    def chat_json(self, messages: List[Dict[str, str]], temperature: float = 0.2) -> dict:
+    def chat_json(self, messages: List[Dict[str, str]], temperature: float = 0.2, num_predict: int | None = None) -> dict:
+        options = {"temperature": temperature}
+        if num_predict:
+            options["num_predict"] = num_predict
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": False,
             "format": "json",
-            "options": {"temperature": temperature},
+            "options": options,
         }
         raw = self._request("POST", "/api/chat", payload)
         content = raw.get("message", {}).get("content", "").strip()

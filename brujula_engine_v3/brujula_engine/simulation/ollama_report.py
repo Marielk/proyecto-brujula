@@ -62,10 +62,39 @@ No recalcules ni cambies los números. Si mencionas dinero, copia los montos tal
 
 
 def generate_sue_letter(client: OllamaClient, life_summary: dict) -> str:
+    selected_path = life_summary.get("selectedPath") or {}
+    compact_summary = {
+        "domain": life_summary.get("domain"),
+        "goalType": life_summary.get("goalType"),
+        "calidadVida": life_summary.get("calidadVida"),
+        "serenidad": life_summary.get("serenidad"),
+        "resiliencia": life_summary.get("resiliencia"),
+        "esperanza": life_summary.get("esperanza"),
+        "riesgoAgotamiento": life_summary.get("riesgoAgotamiento"),
+        "probabilidadArrepentimiento": life_summary.get("probabilidadArrepentimiento"),
+        "valores": life_summary.get("valores", [])[:5],
+        "fortalezas": life_summary.get("fortalezas", [])[:3],
+        "cuidados": life_summary.get("cuidados", [])[:3],
+        "exploredPaths": life_summary.get("exploredPaths"),
+        "selectedPath": {
+            "name": selected_path.get("name"),
+            "description": selected_path.get("description"),
+            "strategy": selected_path.get("strategy"),
+            "evaluationDetails": selected_path.get("evaluationDetails"),
+        },
+        "discardedPaths": [
+            {"name": path.get("name"), "riskLevel": path.get("riskLevel")}
+            for path in life_summary.get("discardedPaths", [])[:2]
+        ],
+        "comparisonReasons": life_summary.get("comparisonReasons", [])[:4],
+        "discardedReasons": life_summary.get("discardedReasons", [])[:3],
+        "assumptions": life_summary.get("assumptions", [])[:3],
+        "perfil": life_summary.get("perfil", {}),
+    }
     prompt = f"""Escribe una Carta de Sue a partir de este LifeSummary.
 
 LifeSummary:
-{json.dumps(life_summary, ensure_ascii=False, indent=2)}
+{json.dumps(compact_summary, ensure_ascii=False, indent=2)}
 
 Reglas:
 - Máximo 3 párrafos breves.
@@ -104,6 +133,7 @@ Sue"""
             {"role": "user", "content": prompt},
         ],
         temperature=0.45,
+        num_predict=650,
     )
 
 

@@ -55,6 +55,7 @@ Forma obligatoria:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.15,
+            num_predict=450,
         )
         domain = raw.get("domain") if raw.get("domain") in DOMAINS else deterministic["spec"]["domain"]
         spec = deterministic["spec"].copy()
@@ -87,53 +88,41 @@ Forma obligatoria:
 
 
 def generate_candidate_paths_with_ai(client: OllamaClient, text: str, goal: dict, life_profile: dict | None = None) -> tuple[list[dict], bool, str | None]:
-    prompt = f"""Crea entre 5 y 7 caminos alternativos plausibles para alcanzar este sueño.
+    prompt = f"""Crea 5 caminos alternativos plausibles para alcanzar este sue?o. Responde JSON compacto.
 
-Objetivo:
-{text}
+Objetivo: {text}
+Dominio: {goal["spec"]["domain"]}
+Tipo: {goal["spec"]["goalType"]}
 
-GoalProfile:
-{json.dumps(goal, ensure_ascii=False, indent=2)}
+Usa estrategias distintas cuando sea posible: pausada, gradual, intensiva, alianza, financiada.
 
-Perfil:
-{json.dumps(life_profile or {}, ensure_ascii=False)[:2500]}
-
-Reglas:
-- Los caminos deben ser diferentes entre sí.
-- No calcules métricas.
-- Devuelve solo JSON.
-
-Forma:
+Forma exacta:
 {{
   "paths": [
     {{
       "id": "path_a",
-      "name": "Mantener empleo y construir en paralelo",
-      "strategy": "paralela|gradual|intensiva|alianza|financiada|pausada",
+      "name": "Nombre breve",
+      "strategy": "pausada|gradual|intensiva|alianza|financiada",
       "description": "Una frase concreta",
-      "assumptions": ["..."],
-      "tradeoffs": ["..."],
-      "timeEstimate": "3 años",
+      "timeEstimate": "3 a?os",
       "financialRisk": "bajo|medio|alto",
       "energyDemand": "baja|media|alta",
       "creativeUpside": "bajo|medio|alto"
-      "steps": ["..."],
-      "decisions": ["..."],
-      "expectedEffects": ["..."]
     }}
   ]
 }}"""
     try:
         raw = client.chat_json(
             [
-                {"role": "system", "content": "Eres Path Generator de Brújula. Imaginas futuros plausibles y concretos."},
+                {"role": "system", "content": "Eres Path Generator de Br?jula. Devuelve solo JSON compacto con la clave paths."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.55,
+            temperature=0.35,
+            num_predict=850,
         )
-        paths = _normalize_paths(raw.get("paths", []), goal)
+        paths = _normalize_paths(raw.get("paths") or raw.get("rutas") or raw.get("routes") or [], goal)
         if len(paths) < 2:
-            raise ValueError("Ollama generó menos de dos caminos útiles.")
+            raise ValueError("Ollama gener? menos de dos caminos ?tiles.")
         return paths[:7], True, None
     except Exception as exc:
         return fallback_candidate_paths(goal), False, str(exc)
@@ -446,8 +435,10 @@ def _normalize_paths(paths: Any, goal: dict) -> list[dict]:
             continue
         name = str(item.get("name") or item.get("nombre") or "").strip()
         description = str(item.get("description") or item.get("descripcion") or "").strip()
-        if not name or not description:
+        if not name:
             continue
+        if not description:
+            description = f"Explorar {name.lower()} con revisión de energía, dinero y apoyo antes de escalar."
         strategy = str(item.get("strategy") or "gradual").lower()
         normalized.append(
             {
@@ -563,6 +554,7 @@ Devuelve solo JSON:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.35,
+            num_predict=450,
         )
         return {
             "recommendedReason": str(raw.get("recommendedReason") or ""),
