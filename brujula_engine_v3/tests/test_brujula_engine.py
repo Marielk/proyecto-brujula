@@ -15,8 +15,11 @@ from brujula_engine.simulation.journey_goal import (
     interpret_goal,
 )
 from brujula_engine.simulation.journey_hybrid import (
+    cluster_evaluated_paths,
     compare_evaluated_paths,
+    expand_candidate_paths,
     fallback_candidate_paths,
+    prune_candidate_paths,
     scenario_from_candidate_path,
 )
 from brujula_engine.simulation.life_profile import base_state_from_profile, profile_warnings
@@ -169,6 +172,8 @@ class TestBrujulaEngine(unittest.TestCase):
             "Quiero comprar una casa en 2030": "vivienda",
             "Quiero tener un hijo": "familia",
             "Quiero vivir del arte": "emprendimiento",
+            "Quiero estudiar un magister": "educacion",
+            "Quiero escribir una novela": "creatividad",
         }
 
         for text, expected_domain in examples.items():
@@ -252,6 +257,30 @@ class TestBrujulaEngine(unittest.TestCase):
         self.assertEqual(comparison["selected"]["id"], "b")
         self.assertEqual([path["id"] for path in comparison["discarded"]], ["c", "a"])
         self.assertIn(comparison["confidence"], {"baja", "media", "alta"})
+
+    def test_path_expander_pruner_and_cluster_explore_many_futures(self):
+        goal = interpret_goal("Quiero estudiar un magister sin quemarme")
+        base_paths = fallback_candidate_paths(goal)
+
+        expanded = expand_candidate_paths(base_paths, goal, target=90)
+        pruned, discarded = prune_candidate_paths(expanded)
+        clusters = cluster_evaluated_paths(
+            [
+                {
+                    **path,
+                    "selectionScore": 70 - index,
+                    "riskLevel": path["financialRisk"],
+                    "preparation": 60,
+                }
+                for index, path in enumerate(pruned[:12])
+            ]
+        )
+
+        self.assertGreaterEqual(len(expanded), 75)
+        self.assertGreaterEqual(len(pruned), 3)
+        self.assertGreaterEqual(len(clusters), 1)
+        self.assertIn("decisions", expanded[0])
+        self.assertTrue(all("representative" in cluster for cluster in clusters))
 
 
 class FakeOllamaClient:

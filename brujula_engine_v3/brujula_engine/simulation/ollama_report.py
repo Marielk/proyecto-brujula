@@ -76,7 +76,10 @@ Reglas:
 - Habla principalmente del sueño específico indicado por domain y goalType.
 - Usa domainMetrics, domainRisks y successConditions si existen.
 - Si existen selectedPath, candidatePaths, discardedPaths, comparisonReasons, confidence o assumptions, explica que se exploraron varios caminos antes de sugerir uno.
+- Si existen exploredPaths, clusteredPaths, discardedReasons, confidenceScore, domainPolicy o evaluationDetails, explica con lenguaje humano que Brújula exploró decenas de futuros y eligió el sendero más protector.
 - Nombra la ruta recomendada con suavidad y una razon humana basada en comparisonReasons.
+- Menciona caminos descartados sin humillarlos: explica qué condición tendría que cambiar para que vuelvan a ser buena idea.
+- Explica por qué la ruta elegida protege mejor la vida que la persona desea construir.
 - Menciona una ruta alternativa solo como posibilidad futura, indicando que tendria que cambiar para ganar fuerza.
 - No presentes la ruta elegida como destino obligatorio.
 - Menciona una fortaleza específica del dominio.

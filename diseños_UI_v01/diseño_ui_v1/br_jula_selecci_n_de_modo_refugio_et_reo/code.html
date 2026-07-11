@@ -1,0 +1,158 @@
+<!DOCTYPE html><html class="light" lang="es" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "outline": "#6e797c",
+                "outline-variant": "#bdc8cc",
+                "background": "#F7FDFF",
+                "primary": "#006877",
+                "on-surface": "#1A3C40",
+                "on-surface-variant": "#4E6164",
+                "surface-container": "#F0FBFC",
+                "aqua-mist": "#BBE8EE",
+                "crystal-lagoon": "#7ADDF2",
+                "water-lily": "#CBB7F5",
+                "lotus-pink": "#F2C7DB",
+                "mint-bloom": "#BFE8CB",
+                "soft-teal": "#2D6A4F",
+                "soft-lavender": "#5E548E"
+            },
+            "borderRadius": {
+                "DEFAULT": "1.5rem",
+                "lg": "2.5rem",
+                "xl": "4rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "unit": "8px",
+                "margin-desktop": "48px",
+                "container-max": "1200px",
+                "margin-mobile": "16px",
+                "gutter": "32px",
+                "section-gap": "6rem",
+                "stack-md": "2rem",
+                "stack-sm": "1rem",
+                "stack-lg": "4rem"
+            },
+            "fontFamily": {
+                "body-lg": ["Newsreader", "serif"],
+                "label-md": ["Newsreader", "serif"],
+                "body-md": ["Newsreader", "serif"],
+                "headline-lg-mobile": ["Newsreader", "serif"],
+                "headline-md": ["Newsreader", "serif"],
+                "display-lg": ["Newsreader", "serif"],
+                "headline-lg": ["Newsreader", "serif"],
+                "headline-xl": ["Newsreader", "serif"],
+                "quote": ["Newsreader", "serif"]
+            },
+            "fontSize": {
+                "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                "body-md": ["17px", {"lineHeight": "26px", "fontWeight": "400"}],
+                "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                "headline-md": ["26px", {"lineHeight": "34px", "fontWeight": "500"}],
+                "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "300"}],
+                "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "400"}],
+                "headline-xl": ["52px", {"lineHeight": "60px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                "quote": ["26px", {"lineHeight": "40px"}]
+            }
+          },
+        },
+      }
+    }catch(_e){}</script></head><body class="min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-white/40 backdrop-blur-md border-b border-white/40">
+<div class="flex justify-between items-center w-full px-margin-desktop py-4 max-w-[1200px] mx-auto h-20">
+<div class="flex items-center gap-2">
+<span class="font-headline-md text-headline-md font-medium text-soft-teal tracking-tight">Brújula</span>
+</div>
+<nav class="hidden md:flex gap-12 items-center">
+<a class="font-body-lg text-body-lg tracking-wide text-soft-teal font-medium relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-mint-bloom after:rounded-full" href="#">Inicio</a>
+<a class="font-body-lg text-body-lg tracking-wide text-on-surface-variant hover:text-soft-teal transition-colors" href="#">Mi Jardín</a>
+<a class="font-body-lg text-body-lg tracking-wide text-on-surface-variant hover:text-soft-teal transition-colors" href="#">Mi Ruta</a>
+</nav>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-soft-teal transition-colors">notifications</button>
+<div class="w-10 h-10 rounded-full bg-white/60 overflow-hidden border border-white/60 p-0.5 shadow-sm active:scale-95 transition-transform cursor-pointer">
+<img alt="User profile photo" class="w-full h-full object-cover rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5xqB3HsavjENt3kwqRJkVkqr3CswgIJvIH3wjQPbiHfcaQIENe_zlFmnTkSc0t7ikOJrXR2_PhtEREYu641iPpj-A-Y_l20fQVwUgIz9xT-hJ1O66_HmSbRPE6xFVfYVblUu_LgwIQmMy6UrN2g57wmVvfBcUXCwg1EMV816WYrHNe39CLoQWTtO8-bA3UxkCboxe0sPRmbrxIgyrMT2t92X6c9XPsra6w-LFBQ8c-wE37lgZEilcEQ">
+</div>
+</div>
+</div>
+</header>
+
+<!-- Main Canvas -->
+<main class="flex-grow pt-48 pb-24 px-margin-mobile md:px-margin-desktop max-w-[1200px] mx-auto w-full">
+<!-- Welcome Header -->
+<section class="mb-stack-lg text-center max-w-3xl mx-auto">
+<h1 class="font-headline-xl text-headline-xl text-on-surface mb-8 tracking-tight">
+                Bienvenido de nuevo,&nbsp;<div class="">¿Qué quieres hacer hoy?
+            </div></h1>
+<p class="text-on-surface-variant/80 font-body-lg text-body-lg italic font-quote max-w-2xl mx-auto">
+                Toma un respiro. Elige el camino que más resuene con tu energía en este momento.
+            </p>
+</section>
+
+<!-- Selection Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<!-- Modo Jardín -->
+<div class="ethereal-card group relative overflow-hidden rounded-xl p-12 md:p-16 min-h-[520px] flex flex-col justify-between bg-mesh-crystal">
+<div class="relative z-10">
+<div class="w-16 h-16 flex items-center justify-center mb-10">
+<span class="material-symbols-outlined text-soft-teal text-6xl opacity-80" style="font-variation-settings: &quot;wght&quot; 200;">potted_plant</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-soft-teal mb-6">Cuidar mi Jardín</h2>
+<p class="text-on-surface-variant font-body-lg text-body-lg max-w-[320px] leading-relaxed">
+                        Pequeños actos de calma para nutrir tu bienestar hoy.
+                    </p>
+</div>
+<!-- Decorative Element -->
+
+<div class="relative z-10">
+<button class="rounded-full bg-mint-bloom hover:bg-mint-bloom/80 text-soft-teal px-12 py-5 font-label-md text-label-md uppercase tracking-[0.25em] shadow-lg shadow-mint-bloom/20 flex items-center justify-center gap-4 transition-all group/btn w-full md:w-auto">
+                        Entrar al Jardín
+                        <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-1 transition-transform">auto_awesome</span>
+</button>
+</div>
+</div>
+
+<!-- Modo Viaje -->
+<div class="ethereal-card group relative overflow-hidden rounded-xl p-12 md:p-16 min-h-[520px] flex flex-col justify-between bg-mesh-lily">
+<div class="relative z-10">
+<div class="w-16 h-16 flex items-center justify-center mb-10">
+<span class="material-symbols-outlined text-soft-lavender text-6xl opacity-80" style="font-variation-settings: &quot;wght&quot; 200;">explore</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-soft-lavender mb-6">Planificar un Viaje</h2>
+<p class="text-on-surface-variant font-body-lg text-body-lg max-w-[320px] leading-relaxed">
+                        Explora nuevos horizontes y traza el camino hacia tus sueños.
+                    </p>
+</div>
+<!-- Decorative Element -->
+
+<div class="relative z-10">
+<button class="rounded-full bg-water-lily hover:bg-water-lily/80 text-soft-lavender px-12 py-5 font-label-md text-label-md uppercase tracking-[0.25em] shadow-lg shadow-water-lily/20 flex items-center justify-center gap-4 transition-all group/btn w-full md:w-auto">
+                        Comenzar Viaje
+                        <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-1 transition-transform">flight_takeoff</span>
+</button>
+</div>
+</div>
+</div>
+
+<!-- Promise Anchor -->
+<section class="mt-section-gap text-center max-w-2xl mx-auto py-20 bg-white/10 rounded-full border border-white/30">
+<div class="inline-block px-8 py-2 rounded-full bg-white/60 text-soft-teal font-label-md text-label-md mb-10 uppercase tracking-[0.4em] border border-white/80">
+                La Promesa
+            </div>
+<blockquote class="font-quote text-quote italic text-on-surface-variant leading-relaxed px-12 opacity-90">
+                "Brújula es un hogar al que siempre puedas volver. No importa qué tan lejos vayas o qué tan pausado sea tu ritmo, aquí siempre encontrarás tu centro."
+            </blockquote>
+</section>
+</main>
+
+<!-- Footer -->
+<footer class="w-full py-16 px-margin-desktop bg-transparent">
+<div class="max-w-[1200px] mx-auto border-t border-aqua-mist/40 pt-12 flex flex-col md:flex-row justify-between items-center gap-gutter">
+<div class="flex flex-col items-center md:items-start gap-4">
+<span class="font-headline-md text-headline-md text-soft-teal/60 font-medium tracking-tight">Brújula</span>
+</div></div></footer></body></html>

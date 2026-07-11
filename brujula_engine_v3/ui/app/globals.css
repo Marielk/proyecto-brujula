@@ -26,6 +26,14 @@
   --v08-pink: #f2c7db;
   --v08-mauve: #7d5070;
   --v08-border: rgba(255, 255, 255, 0.62);
+  --book-bg: #fbf9f4;
+  --book-paper: #fdfbf7;
+  --book-sage: #4b6547;
+  --book-soft-sage: #8fa989;
+  --book-lavender: #655a72;
+  --book-blue: #9ba8b8;
+  --book-ink: #1b1c19;
+  --book-muted: #434841;
 }
 
 body {
@@ -34,11 +42,12 @@ body {
 
 .appCanvas {
   min-height: 100vh;
-  color: var(--v08-text);
+  color: var(--book-ink);
   background:
-    radial-gradient(circle at 88% 12%, rgba(242, 199, 219, 0.55), transparent 34%),
-    radial-gradient(circle at 12% 40%, rgba(191, 232, 203, 0.55), transparent 36%),
-    linear-gradient(135deg, #f7fdff 0%, #effbfc 44%, #f5f1ff 100%);
+    radial-gradient(circle at 85% 18%, rgba(230, 224, 237, 0.45), transparent 32%),
+    radial-gradient(circle at 12% 38%, rgba(205, 235, 197, 0.44), transparent 34%),
+    repeating-radial-gradient(circle at 40% 20%, rgba(27, 28, 25, 0.035) 0 1px, transparent 1px 12px),
+    var(--book-bg);
   padding: 0 32px 56px;
 }
 
@@ -52,8 +61,8 @@ body {
 .topBar {
   align-items: center;
   backdrop-filter: blur(18px);
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(253, 251, 247, 0.76);
+  border: 1px solid rgba(195, 200, 190, 0.34);
   border-radius: 999px;
   display: grid;
   gap: 16px;
@@ -71,7 +80,7 @@ body {
 .brandButton,
 .topBar button {
   background: transparent;
-  color: var(--v08-teal);
+  color: var(--book-sage);
   margin: 0;
   min-height: auto;
 }
@@ -565,6 +574,81 @@ progress::-webkit-progress-value {
   grid-template-columns: 2fr 1fr;
 }
 
+.journeyLoading {
+  align-items: center;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(205, 235, 197, 0.26), transparent 30%),
+    radial-gradient(circle at 85% 78%, rgba(230, 224, 237, 0.30), transparent 34%),
+    rgba(253, 251, 247, 0.72);
+  border-radius: 48px;
+  color: var(--book-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-height: 560px;
+  padding: 72px 28px;
+  text-align: center;
+}
+
+.loadingOrb {
+  animation: slowFloat 6s ease-in-out infinite;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(205, 235, 197, 0.28)),
+    var(--book-paper);
+  border: 1px solid rgba(75, 101, 71, 0.08);
+  border-radius: 999px;
+  height: 210px;
+  width: 210px;
+}
+
+.journeyLoading h2 {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.loadingSteps {
+  display: grid;
+  gap: 18px;
+  text-align: left;
+}
+
+.loadingSteps p {
+  animation: fadeStep 0.8s ease both;
+  color: var(--book-muted);
+  font-family: var(--font-serif);
+  font-size: 21px;
+  margin: 0;
+}
+
+.loadingSteps span {
+  color: var(--book-soft-sage);
+  display: inline-block;
+  margin-right: 16px;
+  width: 24px;
+}
+
+.journeyLoading small {
+  color: var(--book-lavender);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+@keyframes slowFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fadeStep {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .routeCard {
   background: linear-gradient(135deg, rgba(191, 232, 203, 0.35), rgba(203, 183, 245, 0.32), rgba(255, 255, 255, 0.44));
 }
@@ -588,7 +672,7 @@ progress::-webkit-progress-value {
 }
 
 .hybridIntro {
-  background: linear-gradient(135deg, rgba(187, 232, 238, 0.34), rgba(255, 255, 255, 0.58));
+  background: linear-gradient(135deg, rgba(187, 232, 238, 0.30), rgba(253, 251, 247, 0.72));
 }
 
 .hybridIntro span,
@@ -605,7 +689,7 @@ progress::-webkit-progress-value {
 .hybridIntro h2,
 .pathDecisionHeader h3,
 .pathAlternatives h3 {
-  color: var(--v08-teal);
+  color: var(--book-sage);
   font-family: var(--font-serif);
   font-size: 34px;
   font-weight: 500;
@@ -628,7 +712,8 @@ progress::-webkit-progress-value {
 }
 
 .pathDecisionCard {
-  background: linear-gradient(135deg, rgba(191, 232, 203, 0.38), rgba(255, 255, 255, 0.56));
+  background: linear-gradient(135deg, rgba(205, 235, 197, 0.34), rgba(253, 251, 247, 0.66));
+  border-top: 4px solid rgba(75, 101, 71, 0.38);
 }
 
 .pathDecisionHeader {
@@ -691,6 +776,60 @@ progress::-webkit-progress-value {
   margin-top: 26px;
 }
 
+.evaluationPetals {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.evaluationPetals div {
+  background: rgba(253, 251, 247, 0.62);
+  border-radius: 999px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.evaluationPetals span {
+  color: var(--book-muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.evaluationPetals strong {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: 22px;
+}
+
+.decisionSteps {
+  margin-top: 28px;
+}
+
+.decisionSteps h4 {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: 25px;
+  margin-bottom: 14px;
+}
+
+.decisionSteps ol {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.decisionSteps li {
+  background: rgba(253, 251, 247, 0.50);
+  border-radius: 999px;
+  color: var(--book-muted);
+  padding: 12px 18px;
+}
+
 .comparisonReasons h4 {
   color: var(--v08-mauve);
   font-family: var(--font-serif);
@@ -743,6 +882,37 @@ progress::-webkit-progress-value {
   color: var(--v08-teal);
   display: block;
   line-height: 1.45;
+}
+
+.clusterGarden {
+  grid-column: 1 / -1;
+}
+
+.clusterGarden > div:last-child {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.clusterGarden article {
+  background: rgba(253, 251, 247, 0.54);
+  border-radius: 999px;
+  padding: 18px;
+  text-align: center;
+}
+
+.clusterGarden article span {
+  color: var(--book-soft-sage);
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 30px;
+}
+
+.clusterGarden article strong,
+.clusterGarden article small {
+  color: var(--book-sage);
+  display: block;
 }
 
 .routeHead {
@@ -1121,7 +1291,9 @@ progress::-webkit-progress-value {
   .journeyControls,
   .reasonColumns,
   .pathStats,
-  .alternativeGrid {
+  .alternativeGrid,
+  .evaluationPetals,
+  .clusterGarden > div:last-child {
     grid-template-columns: 1fr;
   }
 

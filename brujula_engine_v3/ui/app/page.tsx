@@ -483,10 +483,32 @@ function JourneyMode({
         </div>
       )}
 
-      {isLoading && <div className="journeyEmpty glassPanel"><h2>Sue está leyendo el mapa...</h2><p>El motor cruza tu escenario con tu perfil y prepara una ruta clara.</p></div>}
+      {isLoading && <JourneyLoading />}
 
       {result && <JourneyResults result={result} />}
     </section>
+  );
+}
+
+function JourneyLoading() {
+  return (
+    <div className="journeyLoading">
+      <div className="loadingOrb" aria-hidden="true" />
+      <h2>Sue está leyendo el mapa...</h2>
+      <div className="loadingSteps">
+        {[
+          "Sue abre el mapa...",
+          "Comprendiendo tu sueño.",
+          "Recordando tu Perfil de Vida.",
+          "Explorando futuros posibles.",
+          "Buscando el sendero más amable.",
+          "Preparando una carta para ti."
+        ].map((item, index) => (
+          <p key={item} style={{ animationDelay: `${index * 0.18}s` }}><span>{index === 0 ? "🌱" : "✓"}</span>{item}</p>
+        ))}
+      </div>
+      <small>Un momento de calma mientras trazamos el camino.</small>
+    </div>
   );
 }
 
@@ -495,17 +517,21 @@ function JourneyResults({ result }: { result: SimulationResult }) {
   const selectedPath = guidance.selectedPath || result.selectedPath;
   const candidatePaths = guidance.candidatePaths || result.candidatePaths || [];
   const discardedPaths = guidance.discardedPaths || candidatePaths.filter((path) => path.id !== selectedPath?.id).slice(0, 4);
+  const exploredPaths = guidance.exploredPaths || result.exploredPaths || candidatePaths.length;
+  const clusters = guidance.clusteredPaths || result.clusteredPaths || [];
+  const confidenceScore = Math.round(guidance.confidenceScore || 0);
   const preparation = Math.round(guidance.preparation);
   const effort = effortFromResult(result);
   return (
     <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
       <article className="hybridIntro glassPanel">
-        <span>Motor híbrido de viaje</span>
-        <h2>Exploré varios caminos posibles para llegar a este sueño.</h2>
-        <p>La IA propuso alternativas, el motor determinista evaluó cada una y Brújula eligió la ruta con mejor equilibrio entre deseo, energía, preparación y riesgo.</p>
+        <span>Explorador de futuros v0.12</span>
+        <h2>Exploré {exploredPaths} futuros plausibles antes de sugerirte un sendero.</h2>
+        <p>Brújula expandió estrategias base, podó rutas frágiles, agrupó caminos parecidos y eligió la alternativa que mejor protege tu vida cotidiana.</p>
         <div className="hybridStatus">
           <span className={result.llm.goal ? "okPill" : "fallbackPill"}>Intérprete: {result.llm.goal ? "Ollama" : "Local"}</span>
           <span className={result.llm.paths ? "okPill" : "fallbackPill"}>Caminos: {result.llm.paths ? "Ollama" : "Locales"}</span>
+          <span className={result.llm.comparison ? "okPill" : "fallbackPill"}>Comparación: {result.llm.comparison ? "Ollama" : "Local"}</span>
           <span className={result.llm.report ? "okPill" : "fallbackPill"}>Sue: {result.llm.report ? "Ollama" : "Determinista"}</span>
         </div>
       </article>
@@ -518,7 +544,7 @@ function JourneyResults({ result }: { result: SimulationResult }) {
               <h3>{selectedPath.name}</h3>
               <p>{selectedPath.description}</p>
             </div>
-            <strong>{Math.round(selectedPath.selectionScore)} pts</strong>
+            <strong>{confidenceScore ? `${confidenceScore}%` : `${Math.round(selectedPath.selectionScore)} pts`}</strong>
           </div>
           <div className="pathStats">
             <div><span>Estrategia</span><strong>{strategyLabel(selectedPath.strategy)}</strong></div>
@@ -526,6 +552,24 @@ function JourneyResults({ result }: { result: SimulationResult }) {
             <div><span>Riesgo financiero</span><strong>{riskLabel(selectedPath.financialRisk)}</strong></div>
             <div><span>Demanda de energía</span><strong>{energyLabel(selectedPath.energyDemand)}</strong></div>
           </div>
+          {selectedPath.evaluationDetails && (
+            <div className="evaluationPetals">
+              {Object.entries(evaluationLabels(selectedPath)).map(([key, label]) => (
+                <div key={key}>
+                  <span>{label}</span>
+                  <strong>{Math.round(selectedPath.evaluationDetails?.[key as keyof typeof selectedPath.evaluationDetails] || 0)}%</strong>
+                </div>
+              ))}
+            </div>
+          )}
+          {selectedPath.decisions && selectedPath.decisions.length > 0 && (
+            <div className="decisionSteps">
+              <h4>Decisiones que dibujan esta historia</h4>
+              <ol>
+                {selectedPath.decisions.slice(0, 4).map((decision) => <li key={decision}>{decision}</li>)}
+              </ol>
+            </div>
+          )}
           {guidance.comparisonReasons && guidance.comparisonReasons.length > 0 && (
             <div className="comparisonReasons">
               <h4>Por qué fue elegido</h4>
@@ -552,6 +596,24 @@ function JourneyResults({ result }: { result: SimulationResult }) {
                 </div>
                 <p>{path.description}</p>
                 <small>{whatWouldImprovePath(path)}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {clusters.length > 0 && (
+        <section className="clusterGarden glassPanel">
+          <div className="sectionTitle">
+            <p className="eyebrow">Agrupación de futuros</p>
+            <h3>Familias de caminos exploradas</h3>
+          </div>
+          <div>
+            {clusters.slice(0, 5).map((cluster) => (
+              <article key={cluster.id}>
+                <span>{cluster.size}</span>
+                <strong>{cluster.label}</strong>
+                <small>Promedio {Math.round(cluster.averageScore)} pts</small>
               </article>
             ))}
           </div>
@@ -777,6 +839,8 @@ function domainLabel(domain: string) {
     vivienda: "Vivienda",
     familia: "Familia",
     emprendimiento: "Emprendimiento / cambio de carrera",
+    educacion: "Educación",
+    creatividad: "Creatividad",
     general: "Modelo general"
   }[domain] || domain;
 }
@@ -811,6 +875,20 @@ function whatWouldImprovePath(path: CandidatePath) {
     return "Necesitaria mas preparacion concreta: red de apoyo, informacion del dominio y una primera prueba con evidencia.";
   }
   return "Podria ganar fuerza si sus supuestos se vuelven mas verificables durante un experimento corto.";
+}
+
+function evaluationLabels(path: CandidatePath): Record<string, string> {
+  const details = path.evaluationDetails || {};
+  return Object.fromEntries(
+    [
+      ["sustainability", "Sostenibilidad"],
+      ["qualityOfLife", "Calidad de vida"],
+      ["serenity", "Serenidad"],
+      ["resilience", "Resiliencia"],
+      ["hope", "Esperanza"],
+      ["valueCoherence", "Valores"]
+    ].filter(([key]) => typeof details[key as keyof typeof details] === "number")
+  );
 }
 
 function ProfileWizard({

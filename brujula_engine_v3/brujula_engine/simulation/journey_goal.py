@@ -72,6 +72,20 @@ def domain_metrics(goal: dict, scores: dict, summary: dict, context: dict) -> di
             "Autonomía económica": scores["libertadFinanciera"],
             "Validación creativa": _avg(scores["libertadCreativa"], scores["proposito"]),
         }
+    if domain == "educacion":
+        return {
+            "Preparación de aprendizaje": _avg(scores["energiaVital"], scores["serenidad"], scores["resiliencia"]),
+            "Tiempo de estudio disponible": _avg(scores["energiaVital"], scores["serenidad"], 100 - scores["riesgoAgotamiento"]),
+            "Riesgo de sobrecarga": clamp(100 - _avg(scores["energiaVital"], scores["saludIntegral"], scores["serenidad"])),
+            "Coherencia vocacional": _avg(scores["proposito"], scores["coherenciaEstrellaNorte"]),
+        }
+    if domain == "creatividad":
+        return {
+            "Pulso creativo": _avg(scores["libertadCreativa"], scores["proposito"], scores["esperanza"]),
+            "Espacio de obra": _avg(scores["energiaVital"], scores["serenidad"], scores["libertadFinanciera"]),
+            "Riesgo de exposición": clamp(100 - _avg(scores["resiliencia"], scores["serenidad"], scores["fortalezaRelaciones"])),
+            "Coherencia artística": _avg(scores["libertadCreativa"], scores["coherenciaEstrellaNorte"]),
+        }
     return {
         "Preparación general": _avg(
             scores["calidadVida"],
@@ -121,6 +135,24 @@ def domain_strengths(goal: dict, metrics: dict, scores: dict, context: dict) -> 
                 "Autonomía económica": "Cada punto de margen financiero vuelve más amable la transición.",
             },
         )
+    if domain == "educacion":
+        return _items(
+            ordered,
+            {
+                "Preparación de aprendizaje": "Hay base para estudiar sin depender solo de fuerza de voluntad.",
+                "Coherencia vocacional": "El aprendizaje conversa con la vida que quieres construir.",
+                "Tiempo de estudio disponible": "Aparece algo de espacio para sostener práctica y concentración.",
+            },
+        )
+    if domain == "creatividad":
+        return _items(
+            ordered,
+            {
+                "Pulso creativo": "La creatividad aparece como una fuerza viva para orientar el camino.",
+                "Coherencia artística": "El deseo creativo se alinea con una identidad más propia.",
+                "Espacio de obra": "Hay margen para cuidar el proceso, no solo el resultado.",
+            },
+        )
     return _items(ordered, {})
 
 
@@ -167,6 +199,26 @@ def domain_risks(goal: dict, metrics: dict, scores: dict, context: dict) -> list
             },
             risk=True,
         )
+    if domain == "educacion":
+        return _items(
+            ordered,
+            {
+                "Riesgo de sobrecarga": "Estudiar sin proteger energía puede transformar el aprendizaje en deuda de descanso.",
+                "Tiempo de estudio disponible": "El plan necesita horas reales, no solo entusiasmo.",
+                "Preparación de aprendizaje": "Conviene ajustar ritmo, apoyo y foco antes de cargar demasiado.",
+            },
+            risk=True,
+        )
+    if domain == "creatividad":
+        return _items(
+            ordered,
+            {
+                "Riesgo de exposición": "Mostrar obra sin red emocional puede volver frágil el proceso.",
+                "Espacio de obra": "La creación necesita tiempo protegido para no vivir de impulsos aislados.",
+                "Pulso creativo": "Si la energía creativa baja, la ruta debe hacerse más amable.",
+            },
+            risk=True,
+        )
     return _items(ordered, {}, risk=True)
 
 
@@ -199,6 +251,20 @@ def domain_success_conditions(goal: dict, metrics: dict, scores: dict, context: 
             "Separar un fondo de transición para cubrir meses de menor ingreso.",
             "Definir horas semanales sostenibles para crear sin quemarte.",
             "Construir una oferta pequeña y medible antes de escalar.",
+        ]
+    if domain == "educacion":
+        return [
+            "Reservar bloques de estudio pequeños y repetibles antes de aumentar carga.",
+            "Elegir una ruta formativa compatible con trabajo, salud y descanso.",
+            "Buscar apoyo, mentoría o comunidad para no estudiar en aislamiento.",
+            "Medir avance por práctica sostenida, no solo por certificados.",
+        ]
+    if domain == "creatividad":
+        return [
+            "Proteger un espacio semanal de obra sin exigencia de publicación inmediata.",
+            "Crear una pieza pequeña y mostrarla a una persona segura.",
+            "Separar práctica creativa de validación externa al inicio.",
+            "Cuidar descanso y dinero para que la obra no nazca desde urgencia.",
         ]
     return [
         "Convertir el sueño en un experimento pequeño y medible.",
@@ -233,6 +299,18 @@ def domain_avoid_list(goal: dict, metrics: dict, scores: dict, context: dict) ->
             "Confundir entusiasmo con demanda real del mercado.",
             "Trabajar siete días por semana hasta que el cuerpo cobre la cuenta.",
         ]
+    if domain == "educacion":
+        return [
+            "Inscribirte en una carga alta sin revisar energía y calendario real.",
+            "Estudiar de noche sacrificando descanso como estrategia permanente.",
+            "Elegir un programa solo por prestigio si no conversa con tu vida.",
+        ]
+    if domain == "creatividad":
+        return [
+            "Publicar o vender antes de tener una práctica que te sostenga.",
+            "Comparar tu ritmo creativo con el de otras personas.",
+            "Convertir la obra en una prueba de valor personal.",
+        ]
     return [
         "Tomar una decisión irreversible sin revisar datos reales.",
         "Convertir el sueño en una urgencia que borre tu bienestar.",
@@ -260,6 +338,16 @@ def domain_first_step(goal: dict, metrics: dict, scores: dict, context: dict) ->
         return {
             "title": "Diseñar una prueba pequeña de oferta durante cuatro semanas.",
             "why": "Validar antes de saltar reduce riesgo y muestra qué parte del sueño responde al mundo real.",
+        }
+    if domain == "educacion":
+        return {
+            "title": "Elegir un bloque de estudio de 45 minutos por semana.",
+            "why": "La continuidad pequeña muestra si el deseo educativo cabe en tu vida real.",
+        }
+    if domain == "creatividad":
+        return {
+            "title": "Crear una pieza pequeña sin publicarla todavía.",
+            "why": "La obra necesita un primer refugio antes de pedirle resultados.",
         }
     return {
         "title": "Escribir una hipótesis pequeña del sueño y probarla durante 30 días.",
@@ -294,6 +382,18 @@ def domain_milestones(goal: dict, context: dict) -> list[dict]:
             _milestone(2028, "Primer ingreso propio", "Medir demanda real y aprender dónde aparece tracción."),
             _milestone(2030, "Transición gradual", "Bajar riesgo solo si ahorro, energía e ingresos alternativos acompañan."),
         ]
+    if domain == "educacion":
+        return [
+            _milestone(2027, "Ritmo de aprendizaje", "Probar horarios, foco y apoyo antes de tomar una carga mayor."),
+            _milestone(2028, "Práctica aplicada", "Usar lo aprendido en un proyecto pequeño y medible."),
+            _milestone(2030, "Nueva capacidad", "Integrar el aprendizaje a una decisión laboral o vital más coherente."),
+        ]
+    if domain == "creatividad":
+        return [
+            _milestone(2027, "Espacio de obra", "Abrir una práctica creativa protegida y repetible."),
+            _milestone(2028, "Primera muestra segura", "Compartir una pieza con una comunidad pequeña y amable."),
+            _milestone(2030, "Voz propia", "Consolidar una forma creativa que cuide identidad, descanso y sentido."),
+        ]
     return []
 
 
@@ -307,6 +407,10 @@ def domain_rituals(goal: dict, context: dict) -> list[str]:
         return ["🏡 Conversar con alguien de confianza sobre apoyo real.", "🌙 Reservar una pausa de descanso sin justificarla."]
     if domain == "emprendimiento":
         return ["📖 Crear una pieza pequeña sin evaluar el resultado.", "✨ Mostrar una prueba a una persona segura."]
+    if domain == "educacion":
+        return ["📚 Preparar un bloque de estudio breve con cierre amable.", "✍️ Escribir qué aprendiste sin juzgarte."]
+    if domain == "creatividad":
+        return ["🎨 Abrir veinte minutos de obra sin meta pública.", "✨ Guardar una idea pequeña antes de dormir."]
     return ["☕ Tomar diez minutos para escribir el siguiente experimento pequeño."]
 
 
@@ -317,6 +421,10 @@ def _resolve_domain(lower: str) -> str:
         return "vivienda"
     if any(word in lower for word in ["hijo", "hija", "embarazo", "familia", "maternidad", "paternidad", "criar", "bebé", "bebe"]):
         return "familia"
+    if any(word in lower for word in ["estudiar", "universidad", "magíster", "magister", "curso", "certificación", "certificacion", "aprender", "diplomado"]):
+        return "educacion"
+    if any(word in lower for word in ["escribir", "novela", "pintar", "música", "musica", "obra", "crear una obra", "ilustrar", "poesía", "poesia"]):
+        return "creatividad"
     if any(word in lower for word in ["emprender", "startup", "negocio", "cafetería", "cafeteria", "pasteler", "arte", "vivir del arte", "carrera", "freelance", "brújula", "brujula"]):
         return "emprendimiento"
     return "general"
@@ -329,6 +437,8 @@ def _goal_spec(domain: str, lower: str) -> GoalSpec:
         "vivienda": GoalSpec("vivienda", _housing_type(lower), horizon, ["ahorro", "pie", "deuda", "estabilidad laboral"], ["pie", "preaprobación", "colchón de emergencia"], ["deuda", "gastos fijos", "ingreso estable"]),
         "familia": GoalSpec("familia", "tener un hijo", horizon, ["salud", "red de apoyo", "tiempo", "estabilidad económica"], ["red de apoyo", "hogar", "tiempo protegido"], ["edad", "carga de cuidado", "vivienda"]),
         "emprendimiento": GoalSpec("emprendimiento", _business_type(lower), horizon, ["validación", "ingresos", "ahorro", "energía", "tiempo"], ["oferta validada", "audiencia", "fondo de transición"], ["agotamiento", "deuda", "incertidumbre de ingresos"]),
+        "educacion": GoalSpec("educacion", _education_type(lower), horizon, ["horas de estudio", "energía", "apoyo", "aplicación"], ["tiempo protegido", "programa adecuado", "mentoría"], ["sobrecarga", "costo", "cansancio"]),
+        "creatividad": GoalSpec("creatividad", _creative_type(lower), horizon, ["obra", "práctica", "voz propia", "exposición"], ["tiempo creativo", "red segura", "ritmo de obra"], ["comparación", "exposición temprana", "agotamiento"]),
     }
     return specs.get(domain, GoalSpec("general", "objetivo general", horizon, ["bienestar", "finanzas", "energía", "propósito"], ["experimento pequeño", "tiempo de revisión"], ["incertidumbre"], supported=False))
 
@@ -339,6 +449,8 @@ def _domain_rule_set(domain: str) -> dict:
         "vivienda": "Vivienda",
         "familia": "Familia",
         "emprendimiento": "Emprendimiento / cambio de carrera",
+        "educacion": "Educación",
+        "creatividad": "Creatividad",
         "general": "Modelo general",
     }
     return {"domain": domain, "label": labels.get(domain, "Modelo general")}
@@ -380,6 +492,26 @@ def _business_type(lower: str) -> str:
     if "carrera" in lower:
         return "cambio de carrera"
     return "emprender"
+
+
+def _education_type(lower: str) -> str:
+    if "magister" in lower or "magíster" in lower:
+        return "hacer un magíster"
+    if "universidad" in lower:
+        return "volver a la universidad"
+    if "certific" in lower:
+        return "obtener una certificación"
+    return "aprender algo nuevo"
+
+
+def _creative_type(lower: str) -> str:
+    if "novela" in lower or "escribir" in lower:
+        return "escribir una obra"
+    if "música" in lower or "musica" in lower:
+        return "crear música"
+    if "pint" in lower or "ilustr" in lower:
+        return "desarrollar una obra visual"
+    return "desarrollar una vida creativa"
 
 
 def _avg(*values: float) -> float:

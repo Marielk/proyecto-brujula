@@ -53,9 +53,15 @@ export type LifeSummary = {
   candidatePaths?: CandidatePath[];
   selectedPath?: CandidatePath;
   discardedPaths?: CandidatePath[];
+  discardedReasons?: string[];
   comparisonReasons?: string[];
   confidence?: "baja" | "media" | "alta" | string;
+  confidenceScore?: number;
+  exploredPaths?: number;
+  clusteredPaths?: PathCluster[];
   assumptions?: string[];
+  domainPolicy?: string;
+  evaluationDetails?: EvaluationDetails;
   aiParticipation?: {
     goalInterpreter: boolean;
     pathGenerator: boolean;
@@ -96,9 +102,15 @@ export type JourneyGuidance = {
   candidatePaths?: CandidatePath[];
   selectedPath?: CandidatePath;
   discardedPaths?: CandidatePath[];
+  discardedReasons?: string[];
   comparisonReasons?: string[];
   confidence?: "baja" | "media" | "alta" | string;
+  confidenceScore?: number;
+  exploredPaths?: number;
+  clusteredPaths?: PathCluster[];
   assumptions?: string[];
+  domainPolicy?: string;
+  evaluationDetails?: EvaluationDetails;
   conclusion: {
     tone: "promising" | "demanding" | "fragile";
     title: string;
@@ -139,6 +151,10 @@ export type CandidatePath = {
   description: string;
   assumptions: string[];
   tradeoffs: string[];
+  steps?: string[];
+  decisions?: string[];
+  expectedEffects?: string[];
+  variant?: Record<string, string>;
   timeEstimate: string;
   financialRisk: "bajo" | "medio" | "alto" | string;
   energyDemand: "baja" | "media" | "alta" | string;
@@ -148,6 +164,26 @@ export type CandidatePath = {
   selectionScore: number;
   riskLevel: "bajo" | "medio" | "alto" | string;
   firstStep: string;
+  domainPolicy?: string;
+  evaluationDetails?: EvaluationDetails;
+};
+
+export type EvaluationDetails = {
+  sustainability?: number;
+  qualityOfLife?: number;
+  serenity?: number;
+  resilience?: number;
+  hope?: number;
+  regretProtection?: number;
+  valueCoherence?: number;
+};
+
+export type PathCluster = {
+  id: string;
+  label: string;
+  size: number;
+  representative: CandidatePath;
+  averageScore: number;
 };
 
 export type LifeProfile = {
@@ -255,12 +291,15 @@ export type SimulationResult = {
   goal?: GoalSpec;
   candidatePaths?: CandidatePath[];
   selectedPath?: CandidatePath;
+  exploredPaths?: number;
+  clusteredPaths?: PathCluster[];
   lifeProfile: LifeProfile | Record<string, unknown>;
   warnings: string[];
   llm: {
     scenario: boolean;
     goal?: boolean;
     paths?: boolean;
+    comparison?: boolean;
     report: boolean;
     model: string;
   };

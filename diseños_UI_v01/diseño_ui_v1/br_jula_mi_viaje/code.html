@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Brújula - Planificar un Viaje</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#dde3e5",
+                        "on-secondary-container": "#316e52",
+                        "inverse-on-surface": "#ecf2f4",
+                        "background": "#f4fafc",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#95d4b3",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed": "#1c1149",
+                        "on-surface": "#161d1e",
+                        "primary": "#006877",
+                        "surface-dim": "#d5dbdd",
+                        "surface-container-high": "#e3e9eb",
+                        "surface-bright": "#f4fafc",
+                        "on-primary-fixed": "#001f25",
+                        "on-secondary-fixed-variant": "#0e5138",
+                        "on-background": "#161d1e",
+                        "outline": "#6e797c",
+                        "on-primary-container": "#00616f",
+                        "surface-tint": "#006877",
+                        "tertiary": "#605691",
+                        "on-tertiary-fixed-variant": "#483f77",
+                        "surface": "#f4fafc",
+                        "water-lily": "#CBB7F5",
+                        "surface-container-low": "#eff5f7",
+                        "on-surface-variant": "#3e494b",
+                        "soft-teal": "#2D6A4F",
+                        "surface-container-highest": "#dde3e5",
+                        "on-error-container": "#93000a",
+                        "soft-lavender": "#5E548E",
+                        "tertiary-fixed-dim": "#cabeff",
+                        "on-tertiary-container": "#5a508a",
+                        "primary-fixed": "#a4eeff",
+                        "secondary": "#2c694e",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#e9eff1",
+                        "lotus-pink": "#F2C7DB",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#d3c8ff",
+                        "outline-variant": "#bdc8cc",
+                        "tertiary-fixed": "#e6deff",
+                        "mint-bloom": "#BFE8CB",
+                        "inverse-surface": "#2b3133",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#b1f0ce",
+                        "primary-container": "#8edbec",
+                        "primary-fixed-dim": "#86d2e3",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "error": "#ba1a1a",
+                        "aqua-mist": "#BBE8EE",
+                        "inverse-primary": "#86d2e3",
+                        "on-secondary-fixed": "#002114",
+                        "crystal-lagoon": "#7ADDF2",
+                        "secondary-container": "#aeeecb",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "2rem",
+                        "margin-desktop": "48px",
+                        "container-max": "1200px",
+                        "margin-mobile": "16px",
+                        "gutter": "32px",
+                        "stack-sm": "1rem",
+                        "unit": "8px",
+                        "section-gap": "6rem",
+                        "stack-lg": "4rem"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Newsreader"],
+                        "headline-xl": ["Newsreader"],
+                        "body-md": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "body-lg": ["Newsreader"],
+                        "label-md": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "quote": ["Newsreader"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "300"}],
+                        "headline-xl": ["52px", {"lineHeight": "60px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                        "body-md": ["17px", {"lineHeight": "26px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                        "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                        "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "400"}],
+                        "quote": ["26px", {"lineHeight": "40px", "fontWeight": "400"}],
+                        "headline-md": ["26px", {"lineHeight": "34px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background: radial-gradient(circle at top left, #f4fafc 0%, #BBE8EE 40%, #e6deff 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(122, 221, 242, 0.2);
+        }
+
+        .mesh-gradient-dream {
+            background: linear-gradient(135deg, rgba(191, 232, 203, 0.3) 0%, rgba(203, 183, 245, 0.3) 50%, rgba(242, 199, 219, 0.3) 100%);
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 104, 119, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface selection:bg-mint-bloom selection:text-primary">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/40 backdrop-blur-md dark:bg-surface-variant/20 border-b border-white/20 shadow-sm">
+<div class="flex justify-between items-center max-w-[1200px] mx-auto px-12 py-6">
+<span class="font-display-lg text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight">Brújula</span>
+<div class="hidden md:flex gap-8">
+<a class="text-on-surface-variant transition-colors duration-300 hover:text-primary-fixed-variant" href="#">Travesía</a>
+<a class="text-primary dark:text-primary-fixed border-b-2 border-mint-bloom dark:border-secondary pb-1 transition-colors duration-300" href="#">Refugio</a>
+<a class="text-on-surface-variant transition-colors duration-300 hover:text-primary-fixed-variant" href="#">Diario</a>
+</div>
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform">notifications</span>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform">account_circle</span>
+</div>
+</div>
+</nav>
+<main class="max-w-[1200px] mx-auto px-margin-desktop pt-32 pb-section-gap">
+<!-- Header Section -->
+<header class="text-center mb-stack-lg">
+<h1 class="font-display-lg text-display-lg text-primary mb-2">Planificar un Viaje</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Explora el camino hacia tu sueño</p>
+</header>
+<!-- Input Section -->
+<section class="max-w-3xl mx-auto mb-section-gap">
+<div class="glass-card p-12 rounded-xl flex flex-col items-center gap-6">
+<label class="font-label-md text-label-md text-primary uppercase tracking-widest" for="dream-input">¿Cuál es tu destino final?</label>
+<div class="w-full relative">
+<input class="w-full bg-white/60 border-none rounded-full px-8 py-5 text-headline-md font-headline-md text-primary placeholder:text-outline-variant focus:ring-2 focus:ring-mint-bloom transition-all text-center" id="dream-input" placeholder="Ej: Dedicarme al arte" type="text"/>
+</div>
+<button class="bg-primary text-on-primary rounded-full px-12 py-5 font-label-md tracking-widest hover:bg-on-primary-container transition-all flex items-center gap-2 group">
+                    TRAZAR RUTA
+                    <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">auto_awesome</span>
+</button>
+</div>
+</section>
+<!-- Simulation Results Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Main Path Narrative (Large Card) -->
+<div class="md:col-span-8 glass-card rounded-xl p-12 mesh-gradient-dream overflow-hidden relative">
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="font-label-md text-label-md text-soft-lavender block mb-1">DESTINO</span>
+<h2 class="font-headline-xl text-headline-xl text-primary">El camino del artista</h2>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-soft-lavender block mb-1">PROBABILIDAD</span>
+<div class="flex items-center gap-2">
+<div class="w-24 h-2 bg-white/40 rounded-full overflow-hidden">
+<div class="h-full bg-mint-bloom w-3/4"></div>
+</div>
+<span class="font-headline-md text-headline-md text-primary">75%</span>
+</div>
+</div>
+</div>
+<div class="prose prose-lg max-w-none text-on-surface-variant font-body-lg">
+<p class="mb-6 leading-relaxed">
+                            Tu travesía comienza en el valle de la expresión pura. La simulación indica un inicio marcado por el autodescubrimiento técnico, seguido de una ascensión gradual hacia la consolidación de tu estilo propio. El viento sopla a tu favor en la creatividad, aunque encontrarás niebla en la comercialización inicial.
+                        </p>
+</div>
+<div class="grid grid-cols-2 gap-8 mt-8 border-t border-white/20 pt-8">
+<div>
+<span class="font-label-md text-label-md text-soft-lavender">TIEMPO ESTIMADO</span>
+<p class="font-headline-md text-headline-md text-primary">3 años</p>
+</div>
+<div>
+<span class="font-label-md text-label-md text-soft-lavender">ESFUERZO REQUERIDO</span>
+<p class="font-headline-md text-headline-md text-primary">Medio</p>
+</div>
+</div>
+</div>
+<!-- Ethereal decoration -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-lotus-pink/20 rounded-full blur-3xl"></div>
+</div>
+<!-- Comparison Cards (Smaller column) -->
+<div class="md:col-span-4 flex flex-col gap-gutter">
+<!-- Advantage -->
+<div class="glass-card rounded-xl p-8 border-l-4 border-mint-bloom flex-1 group hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-on-secondary-container mb-4 text-4xl" style="font-variation-settings: 'FILL' 1;">star</span>
+<h3 class="font-headline-md text-headline-md text-on-secondary-container mb-2">Ventaja Principal</h3>
+<p class="text-body-md text-on-surface-variant">Alta adaptabilidad creativa y un mercado creciente para el arte digital auténtico.</p>
+</div>
+<!-- Risk -->
+<div class="glass-card rounded-xl p-8 border-l-4 border-error/30 flex-1 group hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-error mb-4 text-4xl">warning</span>
+<h3 class="font-headline-md text-headline-md text-error mb-2">Riesgo Crítico</h3>
+<p class="text-body-md text-on-surface-variant">Posible saturación de plataformas genéricas; requiere enfoque en nichos especializados.</p>
+</div>
+</div>
+<!-- Timeline Vertical -->
+<div class="md:col-span-12 glass-card rounded-xl p-12 mt-stack-md">
+<h3 class="font-headline-lg text-headline-lg text-primary mb-12 text-center italic">Hitos de tu Destino</h3>
+<div class="relative flex flex-col gap-12 max-w-4xl mx-auto">
+<!-- Timeline line -->
+<div class="absolute left-[20px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-mint-bloom via-water-lily to-lotus-pink"></div>
+<!-- Milestone 1 -->
+<div class="flex gap-8 relative">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm z-10 border-2 border-mint-bloom shrink-0">
+<span class="font-label-md text-primary">1</span>
+</div>
+<div class="flex-1 pb-4 border-b border-white/30">
+<h4 class="font-headline-md text-headline-md text-primary">Cimientos del Santuario</h4>
+<p class="text-body-md text-on-surface-variant">Primeros 6 meses enfocados en dominio técnico y creación de un portafolio semilla.</p>
+</div>
+</div>
+<!-- Milestone 2 -->
+<div class="flex gap-8 relative">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm z-10 border-2 border-water-lily shrink-0">
+<span class="font-label-md text-primary">2</span>
+</div>
+<div class="flex-1 pb-4 border-b border-white/30">
+<h4 class="font-headline-md text-headline-md text-primary">La Voz Propia</h4>
+<p class="text-body-md text-on-surface-variant">Fase de experimentación radical hasta encontrar el estilo que resuena con tu esencia.</p>
+</div>
+</div>
+<!-- Milestone 3 -->
+<div class="flex gap-8 relative">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm z-10 border-2 border-lotus-pink shrink-0">
+<span class="font-label-md text-primary">3</span>
+</div>
+<div class="flex-1">
+<h4 class="font-headline-md text-headline-md text-primary">Manifestación Pública</h4>
+<p class="text-body-md text-on-surface-variant">Lanzamiento oficial y consolidación de comunidad en el tercer año.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Sue's Letter -->
+<div class="md:col-span-7 mt-stack-md">
+<div class="bg-white/80 p-12 rounded-xl shadow-xl relative overflow-hidden border-t-8 border-mint-bloom">
+<div class="relative z-10">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-mint-bloom p-1">
+<img class="w-full h-full object-cover rounded-full" data-alt="A soft, ethereal illustration of a wise, smiling female avatar with translucent glowing hair, soft pastel skin tones, and eyes that reflect a starry sky. She is styled in a painterly, dreamy manner consistent with the light-mode Brújula brand, radiating warmth and cosmic guidance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwORLUANOrfwFPaySnSbAYTdtRg97XLfJwct5VeS8BtuKz8QDsKiVpgJOY_ZlsygRLfoEoNeZ0Fz1UuJhjYp4Y4SMQG6g_6ze_9FEr_vBrtzI9vJi6aQAPzILiIcP2N_3G4c84_370J2COkRJ70swRzMsMfndC6lkrNwt564PvQ4-zrYkJkAMMChuNWLJvnQiw2yPhAnr-8ywHs2u5C-vNqQWEkcR_tUE_M1QE7MeL-dJB0RcWv8rwTQ"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-soft-lavender">MENSAJE DE TU GUÍA</p>
+<h4 class="font-headline-md text-headline-md text-primary italic">Carta de Sue</h4>
+</div>
+</div>
+<blockquote class="font-quote text-quote text-on-surface leading-relaxed italic mb-8">
+                            "Querido viajero, veo en tu simulación una chispa que no se apaga. Aunque el camino del arte exige paciencia, tu resiliencia es mayor que cualquier niebla. Recuerda que no se trata solo del cuadro terminado, sino del aire que respiras mientras sostienes el pincel. Estoy aquí para acompañarte en cada trazo."
+                        </blockquote>
+<p class="font-body-md text-body-md text-on-surface-variant text-right">— Con cariño, Sue</p>
+</div>
+</div>
+</div>
+<!-- Advanced Details Section -->
+<div class="md:col-span-5 mt-stack-md">
+<div class="glass-card rounded-xl overflow-hidden flex flex-col h-full">
+<button class="w-full px-8 py-6 flex justify-between items-center bg-white/20 hover:bg-white/40 transition-colors group" id="toggle-advanced">
+<span class="font-label-md text-label-md text-primary tracking-widest">DATOS TÉCNICOS AVANZADOS</span>
+<span class="material-symbols-outlined transition-transform duration-300" id="advanced-chevron">expand_more</span>
+</button>
+<div class="hidden px-8 py-8 flex-1 border-t border-white/20" id="advanced-content">
+<div class="space-y-6">
+<div class="flex justify-between items-end">
+<span class="text-body-md text-on-surface-variant italic">Motor de Simulación</span>
+<span class="font-label-md text-primary">v0.8-Core-Zen</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="text-body-md text-on-surface-variant italic">Variables de Entorno</span>
+<span class="font-label-md text-primary">Optimista/Resiliente</span>
+</div>
+<div class="h-24 bg-surface-container-low rounded-lg p-4 font-mono text-[12px] text-on-surface-variant overflow-y-auto custom-scrollbar">
+                                dream_query: "dedicarse al arte"
+                                path_seed: 0x8823FB
+                                noise_reduction: true
+                                emotional_balance_offset: 0.15
+                                success_index: 0.7512
+                                resource_drain: { mental: low, physical: medium }
+                            </div>
+<p class="text-[12px] text-on-surface-variant/60 leading-tight">
+                                Nota: Estos datos son aproximaciones basadas en patrones de bienestar digital. No garantizan resultados literales.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Promise Anchor Section -->
+<section class="mt-section-gap">
+<div class="bg-gradient-to-r from-mint-bloom/20 to-water-lily/20 rounded-xl p-16 text-center border border-white/40">
+<p class="font-quote text-quote text-primary max-w-2xl mx-auto italic">
+                    "El viaje es el refugio. Cada paso dado con intención es ya un destino alcanzado."
+                </p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-16 rounded-t-xl bg-surface-container-lowest dark:bg-inverse-surface/10 backdrop-blur-xl bg-gradient-to-t from-white/60 to-transparent">
+<div class="flex flex-col items-center justify-center gap-stack-md max-w-[1200px] mx-auto px-12 text-center">
+<span class="font-display-lg text-headline-sm text-primary">Brújula</span>
+<div class="flex gap-8">
+<a class="font-body-md text-on-surface-variant hover:text-soft-lavender transition-all" href="#">Promesa de Brújula</a>
+<a class="font-body-md text-on-surface-variant hover:text-soft-lavender transition-all" href="#">Privacidad</a>
+<a class="font-body-md text-on-surface-variant hover:text-soft-lavender transition-all" href="#">Soporte</a>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant/60 mt-4">© 2024 Serene Brújula. Tu santuario digital.</p>
+</div>
+</footer>
+<script>
+        // Micro-interactions and Advanced Toggle logic
+        const toggleBtn = document.getElementById('toggle-advanced');
+        const content = document.getElementById('advanced-content');
+        const chevron = document.getElementById('advanced-chevron');
+
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = content.classList.contains('hidden');
+            content.classList.toggle('hidden');
+            chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // Simple parallax or float trigger for cards on scroll
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.glass-card');
+            cards.forEach((card, index) => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top < window.innerHeight) {
+                    card.style.transform = `translateY(${Math.min(0, (rect.top - window.innerHeight) * 0.05)}px)`;
+                }
+            });
+        });
+    </script>
+</body></html>

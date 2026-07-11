@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Brújula - Planificar un Viaje</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#ecddfa",
+                        "secondary-container": "#e9daf7",
+                        "surface": "#fbf9f4",
+                        "on-primary-fixed-variant": "#344d31",
+                        "misty-blue": "#9BA8B8",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#eae8e3",
+                        "secondary-fixed-dim": "#d0c1de",
+                        "on-primary-fixed": "#092009",
+                        "tertiary-container": "#aebecf",
+                        "tertiary-fixed": "#d4e4f6",
+                        "outline-variant": "#c3c8be",
+                        "on-tertiary-fixed-variant": "#394856",
+                        "secondary": "#655a72",
+                        "soft-sage": "#8FA989",
+                        "background": "#fbf9f4",
+                        "surface-variant": "#e4e2dd",
+                        "surface-tint": "#4b6547",
+                        "error": "#ba1a1a",
+                        "parchment-cream": "#FDFBF7",
+                        "on-secondary-container": "#6a5e77",
+                        "surface-container": "#f0eee9",
+                        "primary-fixed-dim": "#b1cfaa",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f5f3ee",
+                        "on-secondary-fixed-variant": "#4d425a",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#b1cfaa",
+                        "on-tertiary-container": "#3e4d5b",
+                        "on-secondary-fixed": "#21172c",
+                        "surface-dim": "#dbdad5",
+                        "outline": "#737970",
+                        "inverse-surface": "#30312e",
+                        "tertiary": "#51606f",
+                        "on-surface-variant": "#434841",
+                        "inverse-on-surface": "#f2f1ec",
+                        "surface-bright": "#fbf9f4",
+                        "on-surface": "#1b1c19",
+                        "primary-fixed": "#cdebc5",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#4b6547",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e4e2dd",
+                        "tertiary-fixed-dim": "#b8c8d9",
+                        "on-tertiary-fixed": "#0d1d2a",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#a7c4a0",
+                        "on-primary-container": "#385235",
+                        "pale-lavender": "#E6E0ED",
+                        "on-background": "#1b1c19"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "2rem",
+                        "page-margin": "4rem",
+                        "unit": "8px",
+                        "section-gap": "6rem",
+                        "stack-md": "2rem",
+                        "stack-lg": "4rem"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "headline-sm": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "headline-md": ["Newsreader"],
+                        "label-md": ["Newsreader"],
+                        "body-md": ["Newsreader"],
+                        "display-lg": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["20px", {"lineHeight": "1.7", "fontWeight": "400"}],
+                        "headline-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "headline-sm": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-md": ["32px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "300"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fbf9f4;
+            background-image: radial-gradient(circle at top right, #f4fafc 0%, #BBE8EE 30%, #fbf9f4 70%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .letter-paper {
+            background-color: #fdfbf7;
+            background-image: 
+                linear-gradient(90deg, transparent 40px, #abced4 40px, #abced4 42px, transparent 42px),
+                linear-gradient(#eee 1.1em, transparent 1.1em);
+            background-size: 100% 1.2em;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05), inset 0 0 40px rgba(0,0,0,0.02);
+            position: relative;
+        }
+
+        .signature {
+            font-family: 'Newsreader', serif;
+            font-style: italic;
+            font-size: 1.5rem;
+            color: #4b6547;
+            margin-top: 2rem;
+            opacity: 0.8;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+    </style>
+</head>
+<body class="font-body-md text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/40 backdrop-blur-md border-b border-white/20 shadow-sm">
+<div class="flex justify-between items-center max-w-[1200px] mx-auto px-12 py-6">
+<span class="font-display-lg text-headline-md text-primary tracking-tight">Brújula</span>
+<div class="hidden md:flex gap-8">
+<a class="text-on-surface-variant transition-colors duration-300 hover:text-primary" href="#">Travesía</a>
+<a class="text-primary border-b-2 border-primary-fixed pb-1 transition-colors duration-300" href="#">Refugio</a>
+<a class="text-on-surface-variant transition-colors duration-300 hover:text-primary" href="#">Diario</a>
+</div>
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform">notifications</span>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform">account_circle</span>
+</div>
+</div>
+</nav>
+<main class="max-w-[1200px] mx-auto px-12 pt-32 pb-section-gap">
+<!-- Header Section -->
+<header class="text-center mb-stack-lg">
+<p class="font-label-md text-primary uppercase tracking-[0.2em] mb-4">Encontré el sendero más amable para ti:</p>
+<h1 class="font-display-lg text-display-lg text-primary mb-2">El camino del artista</h1>
+<p class="font-body-lg text-on-surface-variant max-w-2xl mx-auto">Una ruta trazada con paciencia y luz, diseñada para que tu esencia florezca sin prisas.</p>
+</header>
+<!-- Main Path Logic -->
+<section class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-1 gap-gutter mb-section-gap">
+<div class="glass-card rounded-xl p-12 border-t-4 border-soft-sage shadow-xl relative overflow-hidden">
+<div class="relative z-10">
+<h2 class="font-headline-lg text-primary italic mb-10 text-center">¿Por qué este camino?</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+<div class="text-center">
+<span class="text-4xl mb-4 block">✨</span>
+<h3 class="font-headline-sm text-primary mb-2">Acompañamiento Intuitivo</h3>
+<p class="text-body-md text-on-surface-variant italic">Tu progreso será guiado por la inspiración, no por la presión externa.</p>
+</div>
+<div class="text-center">
+<span class="text-4xl mb-4 block">🌿</span>
+<h3 class="font-headline-sm text-primary mb-2">Crecimiento Orgánico</h3>
+<p class="text-body-md text-on-surface-variant italic">Las bases se asientan sobre la autenticidad, permitiendo un éxito duradero.</p>
+</div>
+<div class="text-center">
+<span class="text-4xl mb-4 block">🕯️</span>
+<h3 class="font-headline-sm text-primary mb-2">Espacio Protegido</h3>
+<p class="text-body-md text-on-surface-variant italic">Minimizamos la fricción social para que tu voz sea lo único que importe.</p>
+</div>
+</div>
+<div class="bg-primary/5 rounded-xl p-8 border border-primary/10">
+<div class="flex gap-4 items-start">
+<span class="material-symbols-outlined text-primary text-3xl">info</span>
+<div>
+<h4 class="font-headline-sm text-primary mb-2">Advertencia amable</h4>
+<p class="text-body-md text-on-surface-variant italic">Encontrarás niebla en la comercialización inicial. No es un muro, es solo una invitación a ser más creativo con tu audiencia.</p>
+</div>
+</div>
+</div>
+<div class="mt-12 pt-8 border-t border-primary/10 flex flex-wrap justify-center gap-12">
+<div class="text-center">
+<p class="font-label-md text-primary uppercase tracking-widest mb-1">Certeza de alma</p>
+<p class="font-headline-md text-primary">Un futuro muy probable</p>
+</div>
+<div class="text-center">
+<p class="font-label-md text-primary uppercase tracking-widest mb-1">Tiempo de siembra</p>
+<p class="font-headline-md text-primary">Cerca de tres ciclos anuales</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Illustrated Timeline -->
+<section class="max-w-3xl mx-auto mb-section-gap">
+<h3 class="font-headline-lg text-primary mb-16 text-center italic">El despliegue de tu destino</h3>
+<div class="relative space-y-20">
+<!-- Line -->
+<div class="absolute left-6 top-4 bottom-4 w-0.5 bg-gradient-to-b from-primary/20 via-primary/40 to-primary/20"></div>
+<!-- Milestone 1 -->
+<div class="relative flex gap-12 group">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10 border-2 border-primary/20 group-hover:scale-110 transition-transform">
+<span class="text-2xl">🌱</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-primary mb-1">Cimientos del Santuario</h4>
+<p class="text-body-md text-on-surface-variant italic max-w-md">Primeros meses enfocados en tu dominio técnico.</p>
+</div>
+</div>
+<!-- Milestone 2 -->
+<div class="relative flex gap-12 group">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10 border-2 border-primary/20 group-hover:scale-110 transition-transform">
+<span class="text-2xl">🦋</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-primary mb-1">El Hallazgo de la Voz</h4>
+<p class="text-body-md text-on-surface-variant italic max-w-md">Experimentación radical hasta encontrar tu propia esencia.</p>
+</div>
+</div>
+<!-- Milestone 3 -->
+<div class="relative flex gap-12 group">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10 border-2 border-primary/20 group-hover:scale-110 transition-transform">
+<span class="text-2xl">☀️</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-primary mb-1">Manifestación Plena</h4>
+<p class="text-body-md text-on-surface-variant italic max-w-md">Lanzamiento y consolidación de tu comunidad creativa.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Sue's Letter -->
+<section class="max-w-2xl mx-auto mb-section-gap">
+<div class="letter-paper p-16 rounded-sm shadow-2xl rotate-1 transform hover:rotate-0 transition-transform duration-500">
+<div class="flex items-center gap-6 mb-10">
+<div class="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-md">
+<img class="w-full h-full object-cover" data-alt="A soft, ethereal illustration of a wise, smiling female avatar with translucent glowing hair, soft pastel skin tones, and eyes that reflect a starry sky." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwORLUANOrfwFPaySnSbAYTdtRg97XLfJwct5VeS8BtuKz8QDsKiVpgJOY_ZlsygRLfoEoNeZ0Fz1UuJhjYp4Y4SMQG6g_6ze_9FEr_vBrtzI9vJi6aQAPzILiIcP2N_3G4c84_370J2COkRJ70swRzMsMfndC6lkrNwt564PvQ4-zrYkJkAMMChuNWLJvnQiw2yPhAnr-8ywHs2u5C-vNqQWEkcR_tUE_M1QE7MeL-dJB0RcWv8rwTQ"/>
+</div>
+<div>
+<p class="font-label-md text-primary/60 uppercase tracking-widest">Desde el corazón de Brújula</p>
+<h4 class="font-headline-md text-primary italic">Querido viajero,</h4>
+</div>
+</div>
+<div class="space-y-6 text-on-surface italic font-newsreader text-xl leading-relaxed">
+<p>"Veo en tu sendero una chispa que no se apaga. Aunque el camino del arte exige paciencia, tu resiliencia es mayor que cualquier niebla."</p>
+<p>"Recuerda que no se trata solo del cuadro terminado, sino del aire que respiras mientras sostienes el pincel con calma."</p>
+<p>"Estoy aquí para acompañarte en cada trazo, protegiendo tu paz mientras descubres tu luz."</p>
+</div>
+<div class="signature">
+                    Con infinito cariño,<br/>
+                    Sue
+                </div>
+</div>
+</section>
+<!-- Promise Anchor Section -->
+<section class="mt-section-gap">
+<div class="bg-primary/5 rounded-xl p-16 text-center border border-primary/10">
+<p class="font-body-lg italic text-primary max-w-2xl mx-auto">
+                    "El viaje es el refugio. Cada paso dado con intención es ya un destino alcanzado."
+                </p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-16 bg-surface-container-lowest border-t border-primary/5">
+<div class="flex flex-col items-center justify-center gap-stack-md max-w-[1200px] mx-auto px-12 text-center">
+<span class="font-display-lg text-headline-sm text-primary">Brújula</span>
+<div class="flex gap-8">
+<a class="font-body-md text-on-surface-variant hover:text-primary transition-all underline decoration-primary/20" href="#">Promesa de Brújula</a>
+<a class="font-body-md text-on-surface-variant hover:text-primary transition-all underline decoration-primary/20" href="#">Privacidad</a>
+<a class="font-body-md text-on-surface-variant hover:text-primary transition-all underline decoration-primary/20" href="#">Soporte</a>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant/60 mt-4 italic">© 2024 Serene Brújula. Tu santuario digital.</p>
+</div>
+</footer>
+</body></html>

@@ -653,6 +653,10 @@ def _domain_icon(goal: dict | None, label: str) -> str:
         return "🤍"
     if domain == "emprendimiento":
         return "✨"
+    if domain == "educacion":
+        return "📚"
+    if domain == "creatividad":
+        return "🎨"
     return "◇"
 
 
@@ -682,6 +686,18 @@ def _domain_index_description(goal: dict | None, label: str) -> str:
             "Riesgo de transición": "Qué tan delicado sería cambiar ingresos, energía y estabilidad.",
             "Autonomía económica": "Cuánto margen financiero existe para experimentar.",
             "Validación creativa": "Qué tan fuerte aparece la base creativa para probar una propuesta.",
+        },
+        "educacion": {
+            "Preparación de aprendizaje": "Qué tan preparada está la vida para sostener estudio real.",
+            "Tiempo de estudio disponible": "Cuánto espacio aparece para aprender sin borrar descanso.",
+            "Riesgo de sobrecarga": "Qué tanto habría que cuidar energía y calendario.",
+            "Coherencia vocacional": "Cuánto conversa el aprendizaje con tu estrella del norte.",
+        },
+        "creatividad": {
+            "Pulso creativo": "Qué tan viva aparece la fuerza creativa en este camino.",
+            "Espacio de obra": "Cuánto margen existe para crear sin urgencia.",
+            "Riesgo de exposición": "Qué tanto habría que proteger la obra y la sensibilidad.",
+            "Coherencia artística": "Cuánto se alinea la ruta con una voz propia.",
         },
     }
     return descriptions.get(domain, {}).get(label, "Indicador específico del tipo de viaje detectado.")

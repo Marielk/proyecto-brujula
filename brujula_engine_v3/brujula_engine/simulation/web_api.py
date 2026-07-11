@@ -10,10 +10,15 @@ from brujula_engine.rules.scoring import general_compass
 from brujula_engine.simulation.engine import run_scenario, scenario_summary
 from brujula_engine.simulation.journey_hybrid import (
     candidate_summary,
+    cluster_evaluated_paths,
     compare_evaluated_paths,
+    decision_timeline,
     enrich_life_report_with_comparison,
+    expand_candidate_paths,
     generate_candidate_paths_with_ai,
     interpret_goal_with_ai,
+    prune_candidate_paths,
+    qualitative_comparison_with_ai,
     scenario_from_candidate_path,
 )
 from brujula_engine.simulation.life_profile import base_state_from_profile, profile_warnings
@@ -50,6 +55,7 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     client = OllamaClient(base_url=ollama_url, model=model, timeout=ollama_timeout)
     used_ollama_for_goal = True
     used_ollama_for_paths = True
+    used_ollama_for_comparison = True
     used_ollama_for_report = True
     base_state = base_state_from_profile(life_profile)
     try:
@@ -68,10 +74,15 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     if goal.get("unsupportedWarning"):
         warnings.append(goal["unsupportedWarning"])
 
-    paths, used_ollama_for_paths, path_error = generate_candidate_paths_with_ai(client, text, goal, life_profile)
+    base_paths, used_ollama_for_paths, path_error = generate_candidate_paths_with_ai(client, text, goal, life_profile)
     if path_error:
         warnings.append("Ollama no pudo generar todos los caminos alternativos. Brújula usó rutas locales del dominio.")
         warnings.append(path_error)
+
+    expanded_paths = expand_candidate_paths(base_paths, goal, target=90)
+    paths, pruned_paths = prune_candidate_paths(expanded_paths)
+    if len(paths) < 3:
+        paths = expanded_paths[:12]
 
     evaluated = []
     for path in paths:
@@ -82,12 +93,29 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         payload = candidate_summary(path, summary, life_report)
         evaluated.append({**payload, "scenario": scenario, "states": states, "summary": summary, "lifeReport": life_report})
 
+    clusters = cluster_evaluated_paths([_public_candidate(item) for item in evaluated])
     comparison = compare_path_results(evaluated)
     selected_eval = comparison["selected"]
     scenario = selected_eval["scenario"]
     states = selected_eval["states"]
     summary = selected_eval["summary"]
-    assumptions = list(dict.fromkeys(goal.get("aiProfile", {}).get("assumptions", []) + selected_eval.get("assumptions", [])))
+    top_public = [_public_candidate(selected_eval), *[_public_candidate(item) for item in comparison["discarded"]]]
+    qualitative, used_ollama_for_comparison, qualitative_error = qualitative_comparison_with_ai(
+        client,
+        top_public,
+        goal,
+        selected_eval["lifeReport"]["lifeSummary"],
+    )
+    if qualitative_error:
+        warnings.append("Ollama no pudo completar la segunda lectura comparativa. Brújula usó comparación local.")
+        warnings.append(qualitative_error)
+    assumptions = list(
+        dict.fromkeys(
+            goal.get("aiProfile", {}).get("assumptions", [])
+            + selected_eval.get("assumptions", [])
+            + qualitative.get("assumptions", [])
+        )
+    )
     life_report = enrich_life_report_with_comparison(
         selected_eval["lifeReport"],
         {
@@ -95,14 +123,21 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
             "discarded": [_public_candidate(item) for item in comparison["discarded"]],
             "reasons": comparison["reasons"],
             "confidence": comparison["confidence"],
+            "confidenceScore": comparison.get("confidenceScore"),
         },
         used_ollama_for_goal,
         used_ollama_for_paths,
         assumptions,
+        explored_paths=len(expanded_paths),
+        clustered_paths=clusters,
+        pruned_paths=pruned_paths,
+        qualitative=qualitative,
+        decision_events=decision_timeline(selected_eval, states),
     )
 
-    life_report["journeyGuidance"]["candidatePaths"] = [_public_candidate(item) for item in evaluated]
-    life_report["lifeSummary"]["candidatePaths"] = [_public_candidate(item) for item in evaluated]
+    visible_candidates = top_public
+    life_report["journeyGuidance"]["candidatePaths"] = visible_candidates
+    life_report["lifeSummary"]["candidatePaths"] = visible_candidates
 
     try:
         report = generate_sue_letter(client, life_report["lifeSummary"])
@@ -130,14 +165,17 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         "report": report,
         "lifeReport": life_report,
         "goal": goal["spec"],
-        "candidatePaths": [_public_candidate(item) for item in evaluated],
+        "candidatePaths": visible_candidates,
         "selectedPath": _public_candidate(selected_eval),
+        "exploredPaths": len(expanded_paths),
+        "clusteredPaths": clusters,
         "lifeProfile": life_profile or {},
         "warnings": warnings,
         "llm": {
             "scenario": used_ollama_for_paths,
             "goal": used_ollama_for_goal,
             "paths": used_ollama_for_paths,
+            "comparison": used_ollama_for_comparison,
             "report": used_ollama_for_report,
             "model": model,
         },
