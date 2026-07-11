@@ -10,10 +10,12 @@ def build_life_report(scenario, states, summary, life_profile: dict | None = Non
     scores = _derived_scores(final, previous, base, context)
     indices = _life_indices(scores)
     path = _path_summary(scenario, summary, scores, indices, context)
-    life_summary = _life_summary(path, indices, scores, summary, scenario, states, context)
+    journey_guidance = _journey_guidance(path, indices, scores, summary, scenario, states, context)
+    life_summary = _life_summary(path, indices, scores, summary, scenario, states, context, journey_guidance)
     return {
         "summary": path,
         "lifeSummary": life_summary,
+        "journeyGuidance": journey_guidance,
         "indices": indices,
         "gains": _gains(indices, summary),
         "sacrifices": _sacrifices(indices, summary),
@@ -217,16 +219,15 @@ def _path_summary(scenario, summary, scores, indices, context) -> dict:
     burnout = scores["riesgoAgotamiento"]
     regret = scores["probabilidadArrepentimiento"]
     financial = scores["libertadFinanciera"]
-    if compass >= 70 and burnout < 45 and regret < 45:
-        title = "🌿 Camino prometedor"
-    elif compass >= 60:
-        title = "🌱 Camino en construcción"
-    elif compass >= 48:
-        title = "🍂 Camino exigente"
-    elif financial < 35 or burnout >= 70:
-        title = "⚠️ Camino riesgoso"
+    preparation = _path_preparation(scores, summary)
+    if preparation >= 72 and burnout < 48 and regret < 55:
+        title = "🌱 Este camino parece posible"
+    elif preparation >= 54:
+        title = "🌿 Este camino puede funcionar"
+    elif financial < 35 or burnout >= 70 or preparation < 42:
+        title = "🌧️ Hoy este escenario parece frágil"
     else:
-        title = "❄️ Camino de pausa"
+        title = "🌿 Este camino puede funcionar"
 
     strongest = _strongest_human(indices)
     care = _main_care(indices)
@@ -237,18 +238,20 @@ def _path_summary(scenario, summary, scores, indices, context) -> dict:
     name = f"{context['name']}, " if context["name"] else ""
     return {
         "title": title,
-        "diagnosis": title.split(" ", 1)[1] if " " in title else title,
-        "status": _level(compass),
+        "diagnosis": _conclusion_label(preparation, financial, burnout, regret),
+        "status": _level(preparation),
         "description": (
-            f"{name}este camino fortalece {strongest.lower()}. "
-            f"El cuidado principal será {care.lower()}, para que el proyecto avance al ritmo de tu vida."
+            f"{name}este sueño no se mide como un veredicto cerrado. "
+            f"Hoy la preparación del camino se apoya en {strongest.lower()}, "
+            f"pero necesita cuidar {care.lower()} para volverse más sostenible."
         ),
         "strongest": strongest,
         "mainCare": care,
+        "preparation": preparation,
     }
 
 
-def _life_summary(path, indices, scores, summary, scenario, states, context) -> dict:
+def _life_summary(path, indices, scores, summary, scenario, states, context, journey_guidance) -> dict:
     return {
         "diagnosticoCamino": path["diagnosis"],
         "calidadVida": scores["calidadVida"],
@@ -280,6 +283,8 @@ def _life_summary(path, indices, scores, summary, scenario, states, context) -> 
         },
         "escenario": scenario.name,
         "brujulaGeneral": summary["compass"],
+        "preparacionCamino": journey_guidance["preparation"],
+        "guiaViaje": journey_guidance,
     }
 
 
@@ -418,6 +423,253 @@ def _rituals(summary, scores, context) -> list[str]:
     if "Empatía" in context["values"]:
         rituals.append("🌿 Elegir una acción amable que no requiera comprar nada.")
     return list(dict.fromkeys(rituals))[:5]
+
+
+def _journey_guidance(path, indices, scores, summary, scenario, states, context) -> dict:
+    preparation = _path_preparation(scores, summary)
+    strengths = identify_strengths(indices)
+    weaknesses = identify_weaknesses(indices, scores, context)
+    conditions = build_success_conditions(scores, summary, context)
+    avoid = build_avoid_list(scores, summary, context)
+    first_step = choose_highest_impact_action(scores, summary, context)
+    return {
+        "conclusion": explain_conclusion(preparation, strengths, weaknesses, path),
+        "preparation": preparation,
+        "preparationLabel": _level(preparation),
+        "preparationExplanation": (
+            "La preparación del camino muestra cuánto soporte existe hoy para sostener este sueño. "
+            "No predice el futuro: señala qué pilares ya están construidos y cuáles conviene fortalecer."
+        ),
+        "flowers": strengths,
+        "cares": weaknesses,
+        "successConditions": conditions,
+        "avoidList": avoid,
+        "firstStep": first_step,
+        "focusQuestion": "¿Qué tendría que cambiar para que este sueño sea posible?",
+    }
+
+
+def explain_conclusion(preparation: float, strengths: list[dict], weaknesses: list[dict], path: dict) -> dict:
+    care_label = weaknesses[0]["label"].lower() if weaknesses else path["mainCare"].lower()
+    strength_label = strengths[0]["label"].lower() if strengths else path["strongest"].lower()
+    if preparation >= 72:
+        tone = "promising"
+        title = "🌱 Este camino parece posible."
+        body = (
+            f"Hay una base real en {strength_label}. Todavía necesita cuidar {care_label}, "
+            "pero el sueño conversa con varias partes de la vida que quieres construir."
+        )
+    elif preparation >= 54:
+        tone = "demanding"
+        title = "🌿 Este camino puede funcionar."
+        body = (
+            f"No aparece como un salto imposible, pero sí como un viaje que pide preparación. "
+            f"Fortalecer {care_label} aumentaría mucho su sostenibilidad."
+        )
+    else:
+        tone = "fragile"
+        title = "🌧️ Hoy este escenario parece demasiado riesgoso."
+        body = (
+            f"No porque el sueño sea imposible, sino porque las condiciones actuales todavía no lo sostienen. "
+            f"El primer cuidado debería estar en {care_label}, antes de acelerar."
+        )
+    return {"tone": tone, "title": title, "body": body}
+
+
+def identify_strengths(indices) -> list[dict]:
+    candidates = sorted(
+        [item for item in indices if not item["inverse"]],
+        key=lambda item: item["value"],
+        reverse=True,
+    )
+    strengths = []
+    for item in candidates[:4]:
+        if item["value"] < 50:
+            continue
+        strengths.append(
+            {
+                "label": _plain_strength_label(item["label"]),
+                "impact": _strength_impact(item),
+                "value": item["value"],
+            }
+        )
+    return strengths or [
+        {
+            "label": "Sueño declarado",
+            "impact": "El deseo existe y puede convertirse en hipótesis de camino si se prueba en pequeño.",
+            "value": 50,
+        }
+    ]
+
+
+def identify_weaknesses(indices, scores, context) -> list[dict]:
+    weak = sorted(indices, key=lambda item: 100 - item["value"] if item["inverse"] else item["value"])
+    cares = []
+    for item in weak[:5]:
+        normalized_score = 100 - item["value"] if item["inverse"] else item["value"]
+        if normalized_score >= 72 and len(cares) >= 2:
+            continue
+        cares.append(
+            {
+                "label": _plain_care_label(item["label"]),
+                "impact": _care_impact(item, scores, context),
+                "value": item["value"],
+                "inverse": item["inverse"],
+            }
+        )
+    return cares[:4]
+
+
+def build_success_conditions(scores, summary, context) -> list[str]:
+    conditions = []
+    if scores["libertadFinanciera"] < 60 or context["savingsLevel"] == "Ninguno":
+        conditions.append("Construir un fondo de emergencia antes de aumentar el riesgo del cambio.")
+    if scores["energiaVital"] < 58 or scores["riesgoAgotamiento"] >= 50:
+        conditions.append("Proteger descanso y límites para que el viaje no dependa de agotarte.")
+    if scores["saludIntegral"] < 58 or context["healthLimits"] in ["Moderadamente", "Mucho"]:
+        conditions.append("Adaptar el ritmo a tu salud actual, con metas pequeñas y sostenibles.")
+    if scores["libertadCreativa"] < 60:
+        conditions.append("Reservar un espacio semanal fijo para crear y validar el proyecto.")
+    if scores["resiliencia"] < 60:
+        conditions.append("Buscar una red de apoyo o una persona testigo antes de tomar decisiones grandes.")
+    if summary["weakest"] == "Estabilidad financiera":
+        conditions.append("Validar ingresos posibles antes de soltar la fuente principal de estabilidad.")
+    if not conditions:
+        conditions = [
+            "Mantener el avance gradual, revisando el camino cada tres meses.",
+            "Probar el sueño en pequeño antes de convertirlo en obligación.",
+            "Cuidar descanso, dinero y vínculos como parte del plan, no como premio final.",
+        ]
+    return list(dict.fromkeys(conditions))[:5]
+
+
+def build_avoid_list(scores, summary, context) -> list[str]:
+    avoid = []
+    if scores["libertadFinanciera"] < 58:
+        avoid.append("Renunciar inmediatamente sin colchón financiero.")
+        avoid.append("Financiar el proyecto con más deuda.")
+    if scores["riesgoAgotamiento"] >= 45 or scores["energiaVital"] < 60:
+        avoid.append("Trabajar siete días por semana para compensar la incertidumbre.")
+    if scores["saludIntegral"] < 60 or context["healthLimits"] in ["Moderadamente", "Mucho"]:
+        avoid.append("Ignorar señales del cuerpo para cumplir un calendario rígido.")
+    if scores["libertadCreativa"] < 55:
+        avoid.append("Exigir resultados públicos antes de tener una práctica mínima.")
+    if not avoid:
+        avoid = [
+            "Convertir el sueño en una carrera contra el tiempo.",
+            "Medir el avance solo por dinero o validación externa.",
+            "Tomar una decisión irreversible sin revisar tus datos reales.",
+        ]
+    return list(dict.fromkeys(avoid))[:5]
+
+
+def choose_highest_impact_action(scores, summary, context) -> dict:
+    if scores["libertadFinanciera"] < 55 or context["savingsLevel"] == "Ninguno":
+        return {
+            "title": "Construir un fondo de emergencia inicial.",
+            "why": "Ese margen baja la urgencia y permite probar el sueño sin que cada error se vuelva una crisis.",
+        }
+    if scores["riesgoAgotamiento"] >= 55 or scores["energiaVital"] < 55:
+        return {
+            "title": "Definir un límite semanal de energía para el proyecto.",
+            "why": "Si el viaje empieza cuidando descanso, tiene más posibilidades de durar.",
+        }
+    if scores["saludIntegral"] < 58 or context["healthLimits"] in ["Moderadamente", "Mucho"]:
+        return {
+            "title": "Diseñar una versión del sueño compatible con tu salud actual.",
+            "why": "El camino mejora cuando el cuerpo deja de ser costo oculto y pasa a ser condición de diseño.",
+        }
+    if scores["libertadCreativa"] < 60:
+        return {
+            "title": "Hacer un experimento creativo pequeño durante cuatro semanas.",
+            "why": "Un experimento real entrega aprendizaje sin obligarte a apostar toda la vida de una vez.",
+        }
+    return {
+        "title": "Elegir una prueba pequeña y fechar una revisión en 30 días.",
+        "why": "La claridad aumenta cuando el sueño sale de la imaginación y se convierte en evidencia amable.",
+    }
+
+
+def _path_preparation(scores, summary) -> float:
+    preparation = (
+        scores["saludIntegral"] * 0.16
+        + scores["energiaVital"] * 0.15
+        + scores["libertadFinanciera"] * 0.18
+        + scores["proposito"] * 0.18
+        + scores["fortalezaRelaciones"] * 0.11
+        + scores["resiliencia"] * 0.12
+        + scores["serenidad"] * 0.10
+        - max(0, scores["riesgoAgotamiento"] - 55) * 0.12
+    )
+    return _clamp(round(preparation, 1))
+
+
+def _conclusion_label(preparation, financial, burnout, regret) -> str:
+    if preparation >= 72 and burnout < 48 and regret < 55:
+        return "Camino prometedor"
+    if preparation >= 54:
+        return "Camino exigente"
+    if financial < 35 or burnout >= 70 or preparation < 42:
+        return "Camino frágil"
+    return "Camino exigente"
+
+
+def _plain_strength_label(label: str) -> str:
+    return {
+        "Propósito": "propósito sólido",
+        "Libertad Creativa": "creatividad disponible",
+        "Fortaleza de Relaciones": "relaciones fuertes",
+        "Resiliencia": "buena resiliencia",
+        "Libertad Financiera": "margen financiero",
+        "Salud Integral": "salud que puede sostener el viaje",
+        "Energía Vital": "energía disponible",
+        "Serenidad": "calma interna",
+        "Coherencia con la Estrella del Norte": "coherencia con tu estrella del norte",
+    }.get(label, label.lower())
+
+
+def _plain_care_label(label: str) -> str:
+    return {
+        "Libertad Financiera": "libertad financiera frágil",
+        "Energía Vital": "poca energía",
+        "Salud Integral": "salud que pide cuidado",
+        "Riesgo de Agotamiento": "riesgo de agotamiento",
+        "Probabilidad de Arrepentimiento": "posible distancia con tus valores",
+        "Serenidad": "poca calma cotidiana",
+        "Libertad Creativa": "poco espacio creativo",
+        "Fortaleza de Relaciones": "red de apoyo limitada",
+    }.get(label, label.lower())
+
+
+def _strength_impact(item) -> str:
+    if item["label"] == "Propósito":
+        return "Ayuda a que el esfuerzo tenga sentido y no dependa solo de resultados rápidos."
+    if item["label"] == "Libertad Creativa":
+        return "Da espacio para experimentar, iterar y encontrar una forma propia del sueño."
+    if item["label"] == "Fortaleza de Relaciones":
+        return "Entrega refugio y perspectiva cuando el camino se vuelva incierto."
+    if item["label"] == "Libertad Financiera":
+        return "Permite tomar decisiones con más calma y menos urgencia."
+    if item["label"] == "Salud Integral":
+        return "Hace más probable que el viaje pueda sostenerse en el tiempo."
+    return item["description"]
+
+
+def _care_impact(item, scores, context) -> str:
+    label = item["label"]
+    if label == "Libertad Financiera":
+        return "Sin margen económico, el sueño puede sentirse como presión en vez de libertad."
+    if label == "Energía Vital":
+        return "La energía baja reduce consistencia y aumenta la tentación de abandonar."
+    if label == "Salud Integral":
+        return "El cuerpo marca el ritmo posible; ignorarlo encarece cualquier avance."
+    if label == "Riesgo de Agotamiento":
+        return "Si el plan exige demasiado descanso pendiente, puede volverse insostenible."
+    if label == "Probabilidad de Arrepentimiento":
+        return "Conviene revisar que el camino no sacrifique algo que para ti es no negociable."
+    if label == "Serenidad":
+        return "La falta de calma puede hacer que decisiones importantes nazcan desde urgencia."
+    return item["description"]
 
 
 def _fortalezas(indices) -> list[str]:

@@ -569,6 +569,18 @@ progress::-webkit-progress-value {
   background: linear-gradient(135deg, rgba(191, 232, 203, 0.35), rgba(203, 183, 245, 0.32), rgba(255, 255, 255, 0.44));
 }
 
+.guidanceHero {
+  grid-column: 1 / -1;
+}
+
+.journeyTone-fragile .guidanceHero {
+  background: linear-gradient(135deg, rgba(242, 199, 219, 0.38), rgba(187, 232, 238, 0.28), rgba(255, 255, 255, 0.52));
+}
+
+.journeyTone-demanding .guidanceHero {
+  background: linear-gradient(135deg, rgba(203, 183, 245, 0.34), rgba(191, 232, 203, 0.30), rgba(255, 255, 255, 0.52));
+}
+
 .routeHead {
   align-items: flex-start;
   display: flex;
@@ -579,8 +591,9 @@ progress::-webkit-progress-value {
 .routeCard h2 {
   color: var(--v08-teal);
   font-family: var(--font-serif);
-  font-size: clamp(34px, 5vw, 56px);
+  font-size: clamp(34px, 5vw, 60px);
   line-height: 1.04;
+  max-width: 760px;
 }
 
 .routeCard p {
@@ -590,23 +603,40 @@ progress::-webkit-progress-value {
   line-height: 1.6;
 }
 
-.probability {
+.focusQuestion {
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 999px;
+  color: var(--v08-teal) !important;
+  display: inline-block;
+  font-size: 18px !important;
+  margin-top: 8px;
+  padding: 12px 22px;
+}
+
+.preparationMeter {
   min-width: 150px;
   text-align: right;
 }
 
-.probability strong {
+.preparationMeter strong {
   color: var(--v08-teal);
   display: block;
   font-family: var(--font-serif);
   font-size: 34px;
 }
 
+.preparationMeter small {
+  color: var(--v08-muted);
+  display: block;
+  margin-top: 8px;
+}
+
 .routeFacts {
   border-top: 1px solid rgba(255, 255, 255, 0.42);
   display: grid;
   gap: 24px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 28px;
   padding-top: 28px;
 }
@@ -620,6 +650,29 @@ progress::-webkit-progress-value {
 .riskColumn {
   display: grid;
   gap: 24px;
+}
+
+.preparationExplain {
+  align-self: start;
+}
+
+.preparationExplain span,
+.firstStepCard span {
+  color: var(--v08-teal);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.preparationExplain p {
+  color: var(--v08-muted);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1.6;
 }
 
 .miniInsight {
@@ -640,6 +693,91 @@ progress::-webkit-progress-value {
 
 .miniInsight.risk {
   border-left: 4px solid rgba(186, 26, 26, 0.38);
+}
+
+.reasoningCard {
+  grid-column: 1 / -1;
+}
+
+.reasoningCard h3,
+.conditionCard h3,
+.avoidCard h3,
+.firstStepCard h3 {
+  color: var(--v08-teal);
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 500;
+}
+
+.reasonColumns {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.reasonColumns h4 {
+  color: var(--v08-mauve);
+  font-family: var(--font-serif);
+  font-size: 26px;
+  margin-bottom: 18px;
+}
+
+.reasonColumns ul,
+.conditionCard ul,
+.avoidCard ul {
+  display: grid;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reasonColumns li,
+.conditionCard li,
+.avoidCard li {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.reasonColumns strong {
+  color: var(--v08-teal);
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.reasonColumns p {
+  color: var(--v08-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.conditionCard,
+.avoidCard {
+  align-self: start;
+}
+
+.conditionCard li,
+.avoidCard li {
+  color: var(--v08-muted);
+  line-height: 1.5;
+}
+
+.firstStepCard {
+  background: linear-gradient(135deg, rgba(191, 232, 203, 0.44), rgba(255, 255, 255, 0.52));
+  grid-column: 1 / -1;
+}
+
+.firstStepCard p {
+  color: var(--v08-muted);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.55;
+  max-width: 760px;
 }
 
 .milestoneCard,
@@ -744,7 +882,8 @@ progress::-webkit-progress-value {
   .gardenGridLayout,
   .selectorRow,
   .journeyResults,
-  .journeyControls {
+  .journeyControls,
+  .reasonColumns {
     grid-template-columns: 1fr;
   }
 
@@ -763,7 +902,7 @@ progress::-webkit-progress-value {
     display: grid;
   }
 
-  .probability {
+  .preparationMeter {
     text-align: left;
   }
 

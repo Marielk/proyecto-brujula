@@ -8,6 +8,7 @@ import type {
   GardenItem,
   GardenNeed,
   GardenTime,
+  JourneyGuidance,
   LifeIndex,
   LifeProfile,
   RitualOutcome,
@@ -489,36 +490,86 @@ function JourneyMode({
 }
 
 function JourneyResults({ result }: { result: SimulationResult }) {
-  const probability = Math.round(result.final.compass);
+  const guidance = result.lifeReport.journeyGuidance || fallbackJourneyGuidance(result);
+  const preparation = Math.round(guidance.preparation);
   const effort = effortFromResult(result);
   return (
-    <section className="journeyResults">
-      <article className="routeCard glassPanel">
+    <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
+      <article className="routeCard guidanceHero glassPanel">
         <div className="routeHead">
           <div>
-            <span>Destino</span>
-            <h2>{result.scenario.name}</h2>
+            <span>Conclusión inmediata</span>
+            <h2>{guidance.conclusion.title}</h2>
           </div>
-          <div className="probability">
-            <span>Probabilidad</span>
-            <strong>{probability}%</strong>
-            <progress max={100} value={probability} />
+          <div className="preparationMeter">
+            <span>Preparación del Camino</span>
+            <strong>{preparation}%</strong>
+            <progress max={100} value={preparation} />
+            <small>{guidance.preparationLabel}</small>
           </div>
         </div>
-        <p>{result.lifeReport.summary.description}</p>
+        <p>{guidance.conclusion.body}</p>
+        <p className="focusQuestion">{guidance.focusQuestion}</p>
         <div className="routeFacts">
-          <div><span>Tiempo estimado</span><strong>{result.scenario.startYear} - {result.scenario.endYear}</strong></div>
+          <div><span>Destino explorado</span><strong>{result.scenario.name}</strong></div>
+          <div><span>Ventana del viaje</span><strong>{result.scenario.startYear} - {result.scenario.endYear}</strong></div>
           <div><span>Esfuerzo requerido</span><strong>{effort}</strong></div>
         </div>
       </article>
 
-      <div className="riskColumn">
-        <article className="miniInsight advantage"><span>☆</span><h3>Ventaja Principal</h3><p>{result.lifeReport.summary.strongest}</p></article>
-        <article className="miniInsight risk"><span>△</span><h3>Riesgo Crítico</h3><p>{result.lifeReport.summary.mainCare}</p></article>
-      </div>
+      <article className="preparationExplain glassPanel">
+        <span>Cómo leer este número</span>
+        <p>{guidance.preparationExplanation}</p>
+      </article>
+
+      <section className="reasoningCard glassPanel">
+        <h3>¿Por qué llegué a esta conclusión?</h3>
+        <div className="reasonColumns">
+          <div>
+            <h4>Flores que encontré</h4>
+            <ul>
+              {guidance.flowers.map((item) => (
+                <li key={item.label}><strong>{item.label}</strong><p>{item.impact}</p></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4>Cuidados importantes</h4>
+            <ul>
+              {guidance.cares.map((item) => (
+                <li key={item.label}><strong>{item.label}</strong><p>{item.impact}</p></li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="conditionCard glassPanel">
+        <h3>Para que este sueño tenga muchas posibilidades de hacerse realidad</h3>
+        <ul>
+          {guidance.successConditions.map((item) => (
+            <li key={item}>✅ {item}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="avoidCard glassPanel">
+        <h3>Evitaría hacer esto</h3>
+        <ul>
+          {guidance.avoidList.map((item) => (
+            <li key={item}>❌ {item}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="firstStepCard glassPanel">
+        <span>Si hoy solo dieras un paso</span>
+        <h3>{guidance.firstStep.title}</h3>
+        <p>{guidance.firstStep.why}</p>
+      </section>
 
       <section className="milestoneCard glassPanel">
-        <h3>Hitos de tu Destino</h3>
+        <h3>Historia del camino</h3>
         <ol>
           {result.lifeReport.timeline.slice(0, 4).map((item, index) => (
             <li key={`${item.year}-${item.title}`}>
@@ -564,6 +615,30 @@ function JourneyResults({ result }: { result: SimulationResult }) {
       </details>
     </section>
   );
+}
+
+function fallbackJourneyGuidance(result: SimulationResult): JourneyGuidance {
+  const preparation = Math.round(result.lifeReport.summary.preparation || result.final.compass);
+  const tone = preparation >= 72 ? "promising" : preparation >= 54 ? "demanding" : "fragile";
+  return {
+    conclusion: {
+      tone,
+      title: result.lifeReport.summary.title,
+      body: result.lifeReport.summary.description
+    },
+    preparation,
+    preparationLabel: result.lifeReport.summary.status,
+    preparationExplanation: "La preparación del camino muestra cuánto soporte existe hoy para sostener este sueño. No es una predicción absoluta.",
+    flowers: result.lifeReport.gains.slice(0, 3).map((item, index) => ({ label: `Flor ${index + 1}`, impact: item, value: preparation })),
+    cares: result.lifeReport.sacrifices.slice(0, 3).map((item, index) => ({ label: `Cuidado ${index + 1}`, impact: item, value: 100 - preparation })),
+    successConditions: result.lifeReport.rituals.slice(0, 3),
+    avoidList: ["Tomar una decisión irreversible sin revisar tus datos reales.", "Convertir el sueño en una carrera contra el tiempo."],
+    firstStep: {
+      title: result.lifeReport.rituals[0] || "Elegir una prueba pequeña y revisarla en 30 días.",
+      why: "Un paso pequeño convierte el sueño en evidencia sin exigir una apuesta total."
+    },
+    focusQuestion: "¿Qué tendría que cambiar para que este sueño sea posible?"
+  };
 }
 
 function ChoicePanel({ title, children }: { title: string; children: React.ReactNode }) {

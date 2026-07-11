@@ -98,6 +98,7 @@ class TestBrujulaEngine(unittest.TestCase):
 
         self.assertIn("summary", report)
         self.assertIn("lifeSummary", report)
+        self.assertIn("journeyGuidance", report)
         self.assertIn("gains", report)
         self.assertIn("sacrifices", report)
         self.assertIn("garden", report)
@@ -107,6 +108,11 @@ class TestBrujulaEngine(unittest.TestCase):
         self.assertLessEqual(len(report["rituals"]), 5)
         self.assertIn("Riesgo de Agotamiento", [item["label"] for item in report["indices"]])
         self.assertIn("serenidad", report["lifeSummary"])
+        self.assertIn("preparacionCamino", report["lifeSummary"])
+        self.assertIn("conclusion", report["journeyGuidance"])
+        self.assertGreaterEqual(len(report["journeyGuidance"]["successConditions"]), 1)
+        self.assertGreaterEqual(len(report["journeyGuidance"]["avoidList"]), 1)
+        self.assertIn("title", report["journeyGuidance"]["firstStep"])
 
     def test_life_profile_changes_simulation_inputs(self):
         scenario = load_scenario("brujula_startup")

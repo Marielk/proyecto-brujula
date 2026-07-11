@@ -63,6 +63,35 @@ export type LifeSummary = {
   suenos: string[];
   escenario: string;
   brujulaGeneral: number;
+  preparacionCamino?: number;
+  guiaViaje?: JourneyGuidance;
+};
+
+export type JourneyReason = {
+  label: string;
+  impact: string;
+  value: number;
+  inverse?: boolean;
+};
+
+export type JourneyGuidance = {
+  conclusion: {
+    tone: "promising" | "demanding" | "fragile";
+    title: string;
+    body: string;
+  };
+  preparation: number;
+  preparationLabel: string;
+  preparationExplanation: string;
+  flowers: JourneyReason[];
+  cares: JourneyReason[];
+  successConditions: string[];
+  avoidList: string[];
+  firstStep: {
+    title: string;
+    why: string;
+  };
+  focusQuestion: string;
 };
 
 export type LifeProfile = {
@@ -137,8 +166,10 @@ export type LifeReport = {
     description: string;
     strongest: string;
     mainCare: string;
+    preparation?: number;
   };
   lifeSummary: LifeSummary;
+  journeyGuidance?: JourneyGuidance;
   indices: LifeIndex[];
   gains: string[];
   sacrifices: string[];
