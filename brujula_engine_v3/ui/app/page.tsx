@@ -13,7 +13,8 @@ import type {
   LifeProfile,
   RitualOutcome,
   RitualRecommendation,
-  SimulationResult
+  SimulationResult,
+  CandidatePath
 } from "../lib/types";
 
 const STORAGE_KEY = "brujula.lifeProfile.v0.7";
@@ -491,15 +492,85 @@ function JourneyMode({
 
 function JourneyResults({ result }: { result: SimulationResult }) {
   const guidance = result.lifeReport.journeyGuidance || fallbackJourneyGuidance(result);
+  const selectedPath = guidance.selectedPath || result.selectedPath;
+  const candidatePaths = guidance.candidatePaths || result.candidatePaths || [];
+  const discardedPaths = guidance.discardedPaths || candidatePaths.filter((path) => path.id !== selectedPath?.id).slice(0, 4);
   const preparation = Math.round(guidance.preparation);
   const effort = effortFromResult(result);
   return (
     <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
+      <article className="hybridIntro glassPanel">
+        <span>Motor híbrido de viaje</span>
+        <h2>Exploré varios caminos posibles para llegar a este sueño.</h2>
+        <p>La IA propuso alternativas, el motor determinista evaluó cada una y Brújula eligió la ruta con mejor equilibrio entre deseo, energía, preparación y riesgo.</p>
+        <div className="hybridStatus">
+          <span className={result.llm.goal ? "okPill" : "fallbackPill"}>Intérprete: {result.llm.goal ? "Ollama" : "Local"}</span>
+          <span className={result.llm.paths ? "okPill" : "fallbackPill"}>Caminos: {result.llm.paths ? "Ollama" : "Locales"}</span>
+          <span className={result.llm.report ? "okPill" : "fallbackPill"}>Sue: {result.llm.report ? "Ollama" : "Determinista"}</span>
+        </div>
+      </article>
+
+      {selectedPath && (
+        <section className="pathDecisionCard glassPanel">
+          <div className="pathDecisionHeader">
+            <div>
+              <span>Ruta recomendada</span>
+              <h3>{selectedPath.name}</h3>
+              <p>{selectedPath.description}</p>
+            </div>
+            <strong>{Math.round(selectedPath.selectionScore)} pts</strong>
+          </div>
+          <div className="pathStats">
+            <div><span>Estrategia</span><strong>{strategyLabel(selectedPath.strategy)}</strong></div>
+            <div><span>Tiempo estimado</span><strong>{selectedPath.timeEstimate}</strong></div>
+            <div><span>Riesgo financiero</span><strong>{riskLabel(selectedPath.financialRisk)}</strong></div>
+            <div><span>Demanda de energía</span><strong>{energyLabel(selectedPath.energyDemand)}</strong></div>
+          </div>
+          {guidance.comparisonReasons && guidance.comparisonReasons.length > 0 && (
+            <div className="comparisonReasons">
+              <h4>Por qué fue elegido</h4>
+              <ul>
+                {guidance.comparisonReasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {discardedPaths.length > 0 && (
+        <section className="pathAlternatives glassPanel">
+          <div className="sectionTitle">
+            <p className="eyebrow">Otros caminos considerados</p>
+            <h3>Qué tendría que cambiar para que otra ruta sea mejor</h3>
+          </div>
+          <div className="alternativeGrid">
+            {discardedPaths.map((path) => (
+              <article key={path.id}>
+                <div>
+                  <strong>{path.name}</strong>
+                  <span>{Math.round(path.selectionScore)} pts</span>
+                </div>
+                <p>{path.description}</p>
+                <small>{whatWouldImprovePath(path)}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <article className="routeCard guidanceHero glassPanel">
+        {guidance.unsupportedWarning && <div className="domainWarning">{guidance.unsupportedWarning}</div>}
         <div className="routeHead">
           <div>
             <span>Conclusión inmediata</span>
             <h2>{guidance.conclusion.title}</h2>
+            {guidance.goal && (
+              <div className="goalBadge">
+                <strong>{domainLabel(guidance.goal.domain)}</strong>
+                <span>{guidance.goal.goalType}</span>
+                {guidance.goal.horizonYear && <em>Horizonte {guidance.goal.horizonYear}</em>}
+              </div>
+            )}
           </div>
           <div className="preparationMeter">
             <span>Preparación del Camino</span>
@@ -521,6 +592,21 @@ function JourneyResults({ result }: { result: SimulationResult }) {
         <span>Cómo leer este número</span>
         <p>{guidance.preparationExplanation}</p>
       </article>
+
+      {guidance.domainMetrics && (
+        <section className="domainMetricsCard glassPanel">
+          <h3>Métricas de este destino</h3>
+          <div className="domainMetricGrid">
+            {Object.entries(guidance.domainMetrics).map(([label, value]) => (
+              <article key={label}>
+                <strong>{label}</strong>
+                <span>{Math.round(value)}%</span>
+                <progress max={100} value={value} />
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="reasoningCard glassPanel">
         <h3>¿Por qué llegué a esta conclusión?</h3>
@@ -683,6 +769,48 @@ function effortFromResult(result: SimulationResult) {
   if (burnout === "Alto") return "Alto";
   if (result.final.compass >= 78) return "Medio";
   return "Muy alto";
+}
+
+function domainLabel(domain: string) {
+  return {
+    salud: "Salud",
+    vivienda: "Vivienda",
+    familia: "Familia",
+    emprendimiento: "Emprendimiento / cambio de carrera",
+    general: "Modelo general"
+  }[domain] || domain;
+}
+
+function strategyLabel(strategy: string) {
+  return {
+    paralela: "Paralela",
+    gradual: "Gradual",
+    intensiva: "Intensiva",
+    alianza: "En alianza",
+    financiada: "Financiada",
+    pausada: "Pausada"
+  }[strategy] || strategy;
+}
+
+function riskLabel(value: string) {
+  return value === "alto" ? "Alto" : value === "bajo" ? "Bajo" : "Medio";
+}
+
+function energyLabel(value: string) {
+  return value === "alta" ? "Alta" : value === "baja" ? "Baja" : "Media";
+}
+
+function whatWouldImprovePath(path: CandidatePath) {
+  if (path.financialRisk === "alto") {
+    return "Podria subir en el ranking si aparece mas ahorro, una fuente de ingresos adicional o menor deuda antes de avanzar.";
+  }
+  if (path.energyDemand === "alta") {
+    return "Podria volverse mejor si tu energia diaria mejora o si la ruta se divide en etapas mas suaves.";
+  }
+  if (path.preparation < 60) {
+    return "Necesitaria mas preparacion concreta: red de apoyo, informacion del dominio y una primera prueba con evidencia.";
+  }
+  return "Podria ganar fuerza si sus supuestos se vuelven mas verificables durante un experimento corto.";
 }
 
 function ProfileWizard({

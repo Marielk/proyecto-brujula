@@ -8,9 +8,16 @@ from brujula_engine.llm.ollama_client import DEFAULT_MODEL, DEFAULT_OLLAMA_URL, 
 from brujula_engine.presentation.life_report import build_life_report
 from brujula_engine.rules.scoring import general_compass
 from brujula_engine.simulation.engine import run_scenario, scenario_summary
+from brujula_engine.simulation.journey_hybrid import (
+    candidate_summary,
+    compare_evaluated_paths,
+    enrich_life_report_with_comparison,
+    generate_candidate_paths_with_ai,
+    interpret_goal_with_ai,
+    scenario_from_candidate_path,
+)
 from brujula_engine.simulation.life_profile import base_state_from_profile, profile_warnings
 from brujula_engine.simulation.ollama_report import generate_sue_letter
-from brujula_engine.simulation.text_scenario import fallback_scenario_from_text, generate_scenario_from_text
 
 
 def money(value) -> str:
@@ -41,22 +48,61 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     warnings = profile_warnings(life_profile)
     ollama_timeout = int(os.getenv("BRUJULA_OLLAMA_TIMEOUT", "20"))
     client = OllamaClient(base_url=ollama_url, model=model, timeout=ollama_timeout)
-    used_ollama_for_scenario = True
+    used_ollama_for_goal = True
+    used_ollama_for_paths = True
     used_ollama_for_report = True
     base_state = base_state_from_profile(life_profile)
-
     try:
         client.ensure_model_available()
-        scenario = generate_scenario_from_text(client, text, base_state)
+        goal, used_ollama_for_goal, goal_error = interpret_goal_with_ai(client, text, life_profile)
     except Exception as exc:
-        used_ollama_for_scenario = False
-        warnings.append("Ollama no pudo construir el escenario. Brújula usó un generador local heurístico para continuar.")
-        warnings.append(str(exc))
-        scenario = fallback_scenario_from_text(text, base_state)
+        from brujula_engine.simulation.journey_goal import interpret_goal
 
-    states = run_scenario(scenario, life_profile)
-    summary = scenario_summary(scenario, life_profile)
-    life_report = build_life_report(summary["scenario"], states, summary, life_profile)
+        goal = interpret_goal(text, life_profile)
+        used_ollama_for_goal = False
+        goal_error = str(exc)
+
+    if goal_error:
+        warnings.append("Ollama no pudo interpretar completamente el objetivo. Brújula usó el intérprete local.")
+        warnings.append(goal_error)
+    if goal.get("unsupportedWarning"):
+        warnings.append(goal["unsupportedWarning"])
+
+    paths, used_ollama_for_paths, path_error = generate_candidate_paths_with_ai(client, text, goal, life_profile)
+    if path_error:
+        warnings.append("Ollama no pudo generar todos los caminos alternativos. Brújula usó rutas locales del dominio.")
+        warnings.append(path_error)
+
+    evaluated = []
+    for path in paths:
+        scenario = scenario_from_candidate_path(path, base_state, goal)
+        states = run_scenario(scenario, life_profile)
+        summary = scenario_summary(scenario, life_profile)
+        life_report = build_life_report(summary["scenario"], states, summary, life_profile, goal)
+        payload = candidate_summary(path, summary, life_report)
+        evaluated.append({**payload, "scenario": scenario, "states": states, "summary": summary, "lifeReport": life_report})
+
+    comparison = compare_path_results(evaluated)
+    selected_eval = comparison["selected"]
+    scenario = selected_eval["scenario"]
+    states = selected_eval["states"]
+    summary = selected_eval["summary"]
+    assumptions = list(dict.fromkeys(goal.get("aiProfile", {}).get("assumptions", []) + selected_eval.get("assumptions", [])))
+    life_report = enrich_life_report_with_comparison(
+        selected_eval["lifeReport"],
+        {
+            "selected": _public_candidate(selected_eval),
+            "discarded": [_public_candidate(item) for item in comparison["discarded"]],
+            "reasons": comparison["reasons"],
+            "confidence": comparison["confidence"],
+        },
+        used_ollama_for_goal,
+        used_ollama_for_paths,
+        assumptions,
+    )
+
+    life_report["journeyGuidance"]["candidatePaths"] = [_public_candidate(item) for item in evaluated]
+    life_report["lifeSummary"]["candidatePaths"] = [_public_candidate(item) for item in evaluated]
 
     try:
         report = generate_sue_letter(client, life_report["lifeSummary"])
@@ -83,31 +129,56 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         "notes": states[-1].notes[-12:],
         "report": report,
         "lifeReport": life_report,
+        "goal": goal["spec"],
+        "candidatePaths": [_public_candidate(item) for item in evaluated],
+        "selectedPath": _public_candidate(selected_eval),
         "lifeProfile": life_profile or {},
         "warnings": warnings,
         "llm": {
-            "scenario": used_ollama_for_scenario,
+            "scenario": used_ollama_for_paths,
+            "goal": used_ollama_for_goal,
+            "paths": used_ollama_for_paths,
             "report": used_ollama_for_report,
             "model": model,
         },
     }
 
 
+def compare_path_results(evaluated: list[dict]) -> dict:
+    public = [
+        {key: value for key, value in item.items() if key not in {"scenario", "states", "summary", "lifeReport"}}
+        for item in evaluated
+    ]
+    comparison = compare_evaluated_paths(public)
+    selected_id = comparison["selected"]["id"]
+    discarded_ids = {item["id"] for item in comparison["discarded"]}
+    selected = next(item for item in evaluated if item["id"] == selected_id)
+    discarded = [item for item in evaluated if item["id"] in discarded_ids]
+    return {**comparison, "selected": selected, "discarded": discarded}
+
+
+def _public_candidate(item: dict) -> dict:
+    return {key: value for key, value in item.items() if key not in {"scenario", "states", "summary", "lifeReport"}}
+
+
 def deterministic_report(life_report: dict) -> str:
     summary = life_report["summary"]
     rituals = life_report["rituals"]
+    guidance = life_report.get("journeyGuidance", {})
+    goal = guidance.get("goal", {})
     profile = life_report.get("lifeSummary", {}).get("perfil", {})
     name = profile.get("nombre") or "Mariel"
-    dream = profile.get("suenoPrincipal") or "construir una vida más propia"
+    dream = profile.get("suenoPrincipal") or goal.get("goalType") or "construir una vida más propia"
     highlight = ""
     if profile.get("destacados"):
         highlight = f" También tengo presente esto de tu perfil: {profile['destacados'][0].lower()}"
     ritual = rituals[0] if rituals else "hacer una pausa breve para escuchar cómo se siente este camino"
     return (
         f"Querida {name}:\n\n"
-        f"Al mirar este camino, veo {summary['strongest'].lower()} como una luz importante. "
-        f"También aparece un cuidado concreto: {summary['mainCare'].lower()}. No significa detenerte; "
-        f"significa avanzar con una forma que no te deje atrás.{highlight}\n\n"
+        f"Al mirar este viaje de {goal.get('goalType', dream).lower()}, veo una pregunta concreta: "
+        f"{guidance.get('focusQuestion', 'qué tendría que cambiar para que este sueño sea posible').lower()} "
+        f"También aparece un cuidado importante: {summary['mainCare'].lower()}. No significa detenerte; "
+        f"significa preparar el terreno correcto para este tipo de sueño.{highlight}\n\n"
         f"Tu sueño de {dream.lower()} no necesita resolverse de golpe. "
         f"Quizás esta semana baste con algo pequeño, como {ritual.lower()} "
         "La decisión sigue siendo tuya, y todavía hay maneras suaves de ajustar el rumbo.\n\n"

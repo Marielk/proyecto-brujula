@@ -3,8 +3,8 @@ import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Brújula v0.9",
-  description: "Guía humana para jardín cotidiano y viaje hacia tus sueños"
+  title: "Brújula v0.11",
+  description: "Motor híbrido IA para comparar caminos de viaje"
 };
 
 const newsreader = Newsreader({

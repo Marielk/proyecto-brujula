@@ -44,6 +44,22 @@ export type GardenItem = {
 };
 
 export type LifeSummary = {
+  domain?: string;
+  goalType?: string;
+  domainMetrics?: Record<string, number>;
+  domainRisks?: JourneyReason[];
+  domainMilestones?: TimelineItem[];
+  successConditions?: string[];
+  candidatePaths?: CandidatePath[];
+  selectedPath?: CandidatePath;
+  discardedPaths?: CandidatePath[];
+  comparisonReasons?: string[];
+  confidence?: "baja" | "media" | "alta" | string;
+  assumptions?: string[];
+  aiParticipation?: {
+    goalInterpreter: boolean;
+    pathGenerator: boolean;
+  };
   diagnosticoCamino: string;
   calidadVida: number;
   libertadFinanciera: number;
@@ -75,6 +91,14 @@ export type JourneyReason = {
 };
 
 export type JourneyGuidance = {
+  goal?: GoalSpec;
+  unsupportedWarning?: string | null;
+  candidatePaths?: CandidatePath[];
+  selectedPath?: CandidatePath;
+  discardedPaths?: CandidatePath[];
+  comparisonReasons?: string[];
+  confidence?: "baja" | "media" | "alta" | string;
+  assumptions?: string[];
   conclusion: {
     tone: "promising" | "demanding" | "fragile";
     title: string;
@@ -85,6 +109,10 @@ export type JourneyGuidance = {
   preparationExplanation: string;
   flowers: JourneyReason[];
   cares: JourneyReason[];
+  domainMetrics?: Record<string, number>;
+  domainRisks?: JourneyReason[];
+  domainMilestones?: TimelineItem[];
+  domainRituals?: string[];
   successConditions: string[];
   avoidList: string[];
   firstStep: {
@@ -92,6 +120,34 @@ export type JourneyGuidance = {
     why: string;
   };
   focusQuestion: string;
+};
+
+export type GoalSpec = {
+  domain: string;
+  goalType: string;
+  horizonYear?: number | null;
+  metrics: string[];
+  requiredResources: string[];
+  constraints: string[];
+  supported: boolean;
+};
+
+export type CandidatePath = {
+  id: string;
+  name: string;
+  strategy: string;
+  description: string;
+  assumptions: string[];
+  tradeoffs: string[];
+  timeEstimate: string;
+  financialRisk: "bajo" | "medio" | "alto" | string;
+  energyDemand: "baja" | "media" | "alta" | string;
+  creativeUpside: "bajo" | "medio" | "alto" | string;
+  preparation: number;
+  compass: number;
+  selectionScore: number;
+  riskLevel: "bajo" | "medio" | "alto" | string;
+  firstStep: string;
 };
 
 export type LifeProfile = {
@@ -196,10 +252,15 @@ export type SimulationResult = {
   notes: string[];
   report: string;
   lifeReport: LifeReport;
+  goal?: GoalSpec;
+  candidatePaths?: CandidatePath[];
+  selectedPath?: CandidatePath;
   lifeProfile: LifeProfile | Record<string, unknown>;
   warnings: string[];
   llm: {
     scenario: boolean;
+    goal?: boolean;
+    paths?: boolean;
     report: boolean;
     model: string;
   };

@@ -73,8 +73,18 @@ Reglas:
 - No describas tablas.
 - No uses lenguaje técnico.
 - No juzgues y no des órdenes.
-- Menciona una fortaleza del camino.
-- Menciona un cuidado concreto.
+- Habla principalmente del sueño específico indicado por domain y goalType.
+- Usa domainMetrics, domainRisks y successConditions si existen.
+- Si existen selectedPath, candidatePaths, discardedPaths, comparisonReasons, confidence o assumptions, explica que se exploraron varios caminos antes de sugerir uno.
+- Nombra la ruta recomendada con suavidad y una razon humana basada en comparisonReasons.
+- Menciona una ruta alternativa solo como posibilidad futura, indicando que tendria que cambiar para ganar fuerza.
+- No presentes la ruta elegida como destino obligatorio.
+- Menciona una fortaleza específica del dominio.
+- Menciona un cuidado concreto del dominio.
+- Si el dominio es salud, centra la carta en descanso, hábitos, constancia y autocuidado.
+- Si el dominio es vivienda, centra la carta en ahorro, pie, deuda y compra sostenible.
+- Si el dominio es familia, centra la carta en red de apoyo, tiempo, hogar y cuidados.
+- Si el dominio es emprendimiento, centra la carta en validación, ingresos, energía y transición gradual.
 - Termina con esperanza.
 - Recuerda con suavidad que la decisión sigue siendo de la persona.
 

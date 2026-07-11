@@ -1,16 +1,28 @@
 from brujula_engine.rules.scoring import general_compass
+from brujula_engine.simulation.journey_goal import (
+    domain_avoid_list,
+    domain_first_step,
+    domain_milestones,
+    domain_metrics,
+    domain_risks,
+    domain_rituals,
+    domain_strengths,
+    domain_success_conditions,
+)
 from brujula_engine.simulation.life_profile import profile_context
 
 
-def build_life_report(scenario, states, summary, life_profile: dict | None = None) -> dict:
+def build_life_report(scenario, states, summary, life_profile: dict | None = None, goal: dict | None = None) -> dict:
     final = states[-1]
     previous = states[-2] if len(states) > 1 else states[-1]
     base = states[0]
     context = profile_context(life_profile)
     scores = _derived_scores(final, previous, base, context)
-    indices = _life_indices(scores)
+    goal = goal or {"spec": {"domain": "general", "goalType": "objetivo general", "supported": False}}
+    domain_metric_values = domain_metrics(goal, scores, summary, context)
+    indices = _life_indices(scores, goal, domain_metric_values)
     path = _path_summary(scenario, summary, scores, indices, context)
-    journey_guidance = _journey_guidance(path, indices, scores, summary, scenario, states, context)
+    journey_guidance = _journey_guidance(path, indices, scores, summary, scenario, states, context, goal, domain_metric_values)
     life_summary = _life_summary(path, indices, scores, summary, scenario, states, context, journey_guidance)
     return {
         "summary": path,
@@ -19,10 +31,11 @@ def build_life_report(scenario, states, summary, life_profile: dict | None = Non
         "indices": indices,
         "gains": _gains(indices, summary),
         "sacrifices": _sacrifices(indices, summary),
-        "timeline": _timeline(states),
+        "timeline": journey_guidance.get("domainMilestones") or _timeline(states),
         "garden": _garden(scores),
-        "rituals": _rituals(summary, scores, context),
+        "rituals": journey_guidance.get("domainRituals") or _rituals(summary, scores, context),
         "profile": context,
+        "goal": goal["spec"],
     }
 
 
@@ -83,31 +96,17 @@ def _derived_scores(state, previous, base, context) -> dict:
     }
 
 
-def _life_indices(scores) -> list[dict]:
+def _life_indices(scores, goal: dict | None = None, domain_metric_values: dict | None = None) -> list[dict]:
     items = [
         ("Calidad de Vida", "🌿", scores["calidadVida"], False, "Qué tan agradable y sostenible se ve este camino."),
         ("Libertad Financiera", "💰", scores["libertadFinanciera"], False, "Cuánto margen real entrega para decidir con calma."),
-        ("Libertad Creativa", "✨", scores["libertadCreativa"], False, "Cuánto espacio aparece para crear algo propio."),
-        ("Salud Integral", "🌳", scores["saludIntegral"], False, "Qué tan preparado está cuerpo y mente para sostener el camino."),
-        ("Energía Vital", "🌙", scores["energiaVital"], False, "Con cuánta energía cotidiana se vive este escenario."),
-        ("Fortaleza de Relaciones", "🏡", scores["fortalezaRelaciones"], False, "Qué tan fuerte aparece la red afectiva y de apoyo."),
+        ("Serenidad", "🌙", scores["serenidad"], False, "Qué tanta calma existe para decidir sin urgencia."),
         ("Propósito", "⭐", scores["proposito"], False, "Cuánto conecta este camino con una vida con sentido."),
-        ("Riesgo de Agotamiento", "⚠️", scores["riesgoAgotamiento"], True, "Cuánto descanso y límites pedirá este escenario."),
-        (
-            "Probabilidad de Arrepentimiento",
-            "🍂",
-            scores["probabilidadArrepentimiento"],
-            True,
-            "Qué tan probable es que el camino se sienta poco propio más adelante.",
-        ),
-        (
-            "Coherencia con la Estrella del Norte",
-            "🔵",
-            scores["coherenciaEstrellaNorte"],
-            False,
-            "Qué tanto se parece a la vida que declaraste querer cultivar.",
-        ),
     ]
+    for label, value in (domain_metric_values or {}).items():
+        inverse = label.startswith("Riesgo")
+        icon = "⚠️" if inverse else _domain_icon(goal, label)
+        items.append((label, icon, value, inverse, _domain_index_description(goal, label)))
     return [_index_item(*item) for item in items]
 
 
@@ -253,6 +252,12 @@ def _path_summary(scenario, summary, scores, indices, context) -> dict:
 
 def _life_summary(path, indices, scores, summary, scenario, states, context, journey_guidance) -> dict:
     return {
+        "domain": journey_guidance["goal"]["domain"],
+        "goalType": journey_guidance["goal"]["goalType"],
+        "domainMetrics": journey_guidance["domainMetrics"],
+        "domainRisks": journey_guidance["domainRisks"],
+        "domainMilestones": journey_guidance["domainMilestones"],
+        "successConditions": journey_guidance["successConditions"],
         "diagnosticoCamino": path["diagnosis"],
         "calidadVida": scores["calidadVida"],
         "libertadFinanciera": scores["libertadFinanciera"],
@@ -425,14 +430,18 @@ def _rituals(summary, scores, context) -> list[str]:
     return list(dict.fromkeys(rituals))[:5]
 
 
-def _journey_guidance(path, indices, scores, summary, scenario, states, context) -> dict:
+def _journey_guidance(path, indices, scores, summary, scenario, states, context, goal, domain_metric_values) -> dict:
     preparation = _path_preparation(scores, summary)
-    strengths = identify_strengths(indices)
-    weaknesses = identify_weaknesses(indices, scores, context)
-    conditions = build_success_conditions(scores, summary, context)
-    avoid = build_avoid_list(scores, summary, context)
-    first_step = choose_highest_impact_action(scores, summary, context)
+    strengths = domain_strengths(goal, domain_metric_values, scores, context) if goal["spec"]["supported"] else identify_strengths(indices)
+    weaknesses = domain_risks(goal, domain_metric_values, scores, context) if goal["spec"]["supported"] else identify_weaknesses(indices, scores, context)
+    conditions = domain_success_conditions(goal, domain_metric_values, scores, context) if goal["spec"]["supported"] else build_success_conditions(scores, summary, context)
+    avoid = domain_avoid_list(goal, domain_metric_values, scores, context) if goal["spec"]["supported"] else build_avoid_list(scores, summary, context)
+    first_step = domain_first_step(goal, domain_metric_values, scores, context) if goal["spec"]["supported"] else choose_highest_impact_action(scores, summary, context)
+    milestones = domain_milestones(goal, context) if goal["spec"]["supported"] else _timeline(states)
+    rituals = domain_rituals(goal, context) if goal["spec"]["supported"] else _rituals(summary, scores, context)
     return {
+        "goal": goal["spec"],
+        "unsupportedWarning": goal.get("unsupportedWarning"),
         "conclusion": explain_conclusion(preparation, strengths, weaknesses, path),
         "preparation": preparation,
         "preparationLabel": _level(preparation),
@@ -442,6 +451,10 @@ def _journey_guidance(path, indices, scores, summary, scenario, states, context)
         ),
         "flowers": strengths,
         "cares": weaknesses,
+        "domainMetrics": domain_metric_values,
+        "domainRisks": weaknesses,
+        "domainMilestones": milestones,
+        "domainRituals": rituals,
         "successConditions": conditions,
         "avoidList": avoid,
         "firstStep": first_step,
@@ -626,6 +639,52 @@ def _plain_strength_label(label: str) -> str:
         "Serenidad": "calma interna",
         "Coherencia con la Estrella del Norte": "coherencia con tu estrella del norte",
     }.get(label, label.lower())
+
+
+def _domain_icon(goal: dict | None, label: str) -> str:
+    domain = (goal or {}).get("spec", {}).get("domain", "general")
+    if label.startswith("Riesgo"):
+        return "⚠️"
+    if domain == "salud":
+        return "🌳"
+    if domain == "vivienda":
+        return "🏡"
+    if domain == "familia":
+        return "🤍"
+    if domain == "emprendimiento":
+        return "✨"
+    return "◇"
+
+
+def _domain_index_description(goal: dict | None, label: str) -> str:
+    domain = (goal or {}).get("spec", {}).get("domain", "general")
+    descriptions = {
+        "salud": {
+            "Preparación física": "Qué tan listo está el cuerpo para avanzar sin castigo.",
+            "Riesgo de recaída": "Qué tanto habría que cuidar dolor, descanso y sobreexigencia.",
+            "Capacidad funcional": "Cuánto margen físico aparece para sostener hábitos.",
+            "Adherencia esperada": "Qué tan repetible se ve la rutina en la vida real.",
+        },
+        "vivienda": {
+            "Preparación hipotecaria": "Qué tan cerca está la base financiera de sostener una compra.",
+            "Capacidad de ahorro": "Qué tan posible se ve juntar pie y colchón sin ahogarse.",
+            "Riesgo financiero": "Qué tan frágil sería asumir compromisos de vivienda hoy.",
+            "Estabilidad de ingresos": "Cuánto suelo entregan ingresos y serenidad para planificar.",
+        },
+        "familia": {
+            "Preparación familiar": "Qué tan preparada está la vida para sumar cuidados importantes.",
+            "Fortaleza de la red de apoyo": "Qué tan acompañada podría estar esta etapa.",
+            "Disponibilidad de tiempo": "Cuánto espacio real aparece para presencia y descanso.",
+            "Seguridad del hogar": "Qué tan estable se ve la base material del hogar.",
+        },
+        "emprendimiento": {
+            "Preparación del negocio": "Qué tan cerca está el sueño de convertirse en oferta sostenible.",
+            "Riesgo de transición": "Qué tan delicado sería cambiar ingresos, energía y estabilidad.",
+            "Autonomía económica": "Cuánto margen financiero existe para experimentar.",
+            "Validación creativa": "Qué tan fuerte aparece la base creativa para probar una propuesta.",
+        },
+    }
+    return descriptions.get(domain, {}).get(label, "Indicador específico del tipo de viaje detectado.")
 
 
 def _plain_care_label(label: str) -> str:
