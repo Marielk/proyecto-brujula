@@ -22,6 +22,14 @@ const CHECKIN_STORAGE_KEY = "brujula.dailyCheckIn.v0.8";
 const OUTCOME_STORAGE_KEY = "brujula.ritualOutcome.v0.8";
 const EXAMPLE =
   "Quiero simular dedicarme gradualmente a Brújula desde 2028, bajando horas del trabajo actual, haciendo freelance para sostener ingresos y cuidando mi salud física.";
+const JOURNEY_LOADING_STEPS = [
+  "Sue abre el mapa...",
+  "Comprendiendo tu sueño.",
+  "Recordando tu Perfil de Vida.",
+  "Explorando caminos posibles.",
+  "Buscando el sendero más amable.",
+  "Preparando una carta para ti."
+];
 type Mode = "home" | "garden" | "journey";
 
 const emptyProfile: LifeProfile = {
@@ -491,20 +499,28 @@ function JourneyMode({
 }
 
 function JourneyLoading() {
+  const [visibleSteps, setVisibleSteps] = useState(1);
+
+  useEffect(() => {
+    setVisibleSteps(1);
+    const interval = window.setInterval(() => {
+      setVisibleSteps((current) => Math.min(current + 1, JOURNEY_LOADING_STEPS.length));
+    }, 1150);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
     <div className="journeyLoading">
-      <div className="loadingOrb" aria-hidden="true" />
+      <div className="loadingOrb" aria-hidden="true">
+        <img src="/assets/sue-mapa.png" alt="" />
+      </div>
       <h2>Sue está leyendo el mapa...</h2>
       <div className="loadingSteps">
-        {[
-          "Sue abre el mapa...",
-          "Comprendiendo tu sueño.",
-          "Recordando tu Perfil de Vida.",
-          "Explorando futuros posibles.",
-          "Buscando el sendero más amable.",
-          "Preparando una carta para ti."
-        ].map((item, index) => (
-          <p key={item} style={{ animationDelay: `${index * 0.18}s` }}><span>{index === 0 ? "🌱" : "✓"}</span>{item}</p>
+        {JOURNEY_LOADING_STEPS.slice(0, visibleSteps).map((item, index) => (
+          <p className={index === visibleSteps - 1 ? "activeStep" : "doneStep"} key={item}>
+            <span>{index === visibleSteps - 1 ? "•" : "✓"}</span>{item}
+          </p>
         ))}
       </div>
       <small>Un momento de calma mientras trazamos el camino.</small>
