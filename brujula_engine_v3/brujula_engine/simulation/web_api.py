@@ -100,12 +100,17 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     states = selected_eval["states"]
     summary = selected_eval["summary"]
     top_public = [_public_candidate(selected_eval), *[_public_candidate(item) for item in comparison["discarded"]]]
-    qualitative, used_ollama_for_comparison, qualitative_error = qualitative_comparison_with_ai(
-        client,
-        top_public,
-        goal,
-        selected_eval["lifeReport"]["lifeSummary"],
-    )
+    if path_error:
+        qualitative = local_qualitative_comparison(top_public)
+        used_ollama_for_comparison = False
+        qualitative_error = None
+    else:
+        qualitative, used_ollama_for_comparison, qualitative_error = qualitative_comparison_with_ai(
+            client,
+            top_public,
+            goal,
+            selected_eval["lifeReport"]["lifeSummary"],
+        )
     if qualitative_error:
         warnings.append("Ollama no pudo completar la segunda lectura comparativa. Brújula usó comparación local.")
         warnings.append(qualitative_error)
@@ -140,6 +145,8 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     life_report["lifeSummary"]["candidatePaths"] = visible_candidates
 
     try:
+        if path_error or qualitative_error:
+            raise RuntimeError("Se priorizo respuesta local rapida porque la IA ya venia lenta en esta simulacion.")
         report = generate_sue_letter(client, life_report["lifeSummary"])
     except Exception as exc:
         used_ollama_for_report = False
@@ -197,6 +204,20 @@ def compare_path_results(evaluated: list[dict]) -> dict:
 
 def _public_candidate(item: dict) -> dict:
     return {key: value for key, value in item.items() if key not in {"scenario", "states", "summary", "lifeReport"}}
+
+
+def local_qualitative_comparison(top_paths: list[dict]) -> dict:
+    selected = top_paths[0]
+    alternatives = top_paths[1:]
+    return {
+        "recommendedReason": f"La ruta '{selected['name']}' protege mejor el equilibrio entre avance, energia, dinero y sentido.",
+        "discardedReasons": [
+            f"{path['name']} queda como alternativa si baja su riesgo o aumenta la preparacion disponible."
+            for path in alternatives
+        ],
+        "lifeProtection": "La recomendacion local prioriza una ruta reversible y sostenible antes que la maxima velocidad.",
+        "assumptions": ["Comparacion cualitativa local activada para evitar que la simulacion se bloquee por latencia de Ollama."],
+    }
 
 
 def deterministic_report(life_report: dict) -> str:
