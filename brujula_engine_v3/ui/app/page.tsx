@@ -1,11 +1,26 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { GardenItem, LifeIndex, LifeProfile, SimulationResult } from "../lib/types";
+import { calculateGardenState, defaultCheckIn, gardenMoodLine, recommendRitual } from "../lib/garden";
+import type {
+  DailyCheckIn,
+  GardenIndicator,
+  GardenItem,
+  GardenNeed,
+  GardenTime,
+  LifeIndex,
+  LifeProfile,
+  RitualOutcome,
+  RitualRecommendation,
+  SimulationResult
+} from "../lib/types";
 
 const STORAGE_KEY = "brujula.lifeProfile.v0.7";
+const CHECKIN_STORAGE_KEY = "brujula.dailyCheckIn.v0.8";
+const OUTCOME_STORAGE_KEY = "brujula.ritualOutcome.v0.8";
 const EXAMPLE =
   "Quiero simular dedicarme gradualmente a Brújula desde 2028, bajando horas del trabajo actual, haciendo freelance para sostener ingresos y cuidando mi salud física.";
+type Mode = "home" | "garden" | "journey";
 
 const emptyProfile: LifeProfile = {
   identity: {
@@ -93,6 +108,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<Mode>("home");
+  const [checkIn, setCheckIn] = useState<DailyCheckIn>(defaultCheckIn);
+  const [ritualOutcome, setRitualOutcome] = useState<RitualOutcome | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -105,6 +123,25 @@ export default function Home() {
       setHasProfile(true);
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedCheckIn = window.localStorage.getItem(CHECKIN_STORAGE_KEY);
+    const savedOutcome = window.localStorage.getItem(OUTCOME_STORAGE_KEY);
+    if (savedCheckIn) {
+      try {
+        setCheckIn({ ...defaultCheckIn, ...JSON.parse(savedCheckIn) });
+      } catch {
+        window.localStorage.removeItem(CHECKIN_STORAGE_KEY);
+      }
+    }
+    if (savedOutcome) {
+      try {
+        setRitualOutcome(JSON.parse(savedOutcome));
+      } catch {
+        window.localStorage.removeItem(OUTCOME_STORAGE_KEY);
+      }
     }
   }, []);
 
@@ -125,6 +162,7 @@ export default function Home() {
     setIsEditingProfile(true);
     setStep(0);
     setResult(null);
+    setMode("home");
   }
 
   function update(section: keyof LifeProfile, key: string, value: unknown) {
@@ -162,9 +200,31 @@ export default function Home() {
   }
 
   const showProfileForm = isEditingProfile || !hasProfile;
+  const indicators = useMemo(() => calculateGardenState(profile, checkIn), [profile, checkIn]);
+  const ritual = useMemo(() => recommendRitual(profile, checkIn), [profile, checkIn]);
+
+  function updateCheckIn(update: Partial<DailyCheckIn>) {
+    setCheckIn((current) => {
+      const next = { ...current, ...update, createdAt: new Date().toISOString() };
+      window.localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function recordOutcome(completed: boolean, feelingAfter = 70) {
+    const next = {
+      ritualId: ritual.ritual.id,
+      completed,
+      feelingAfter,
+      note: completed ? "Ritual registrado desde Mi Jardín." : "Ritual guardado para intentar después.",
+      createdAt: new Date().toISOString()
+    };
+    setRitualOutcome(next);
+    window.localStorage.setItem(OUTCOME_STORAGE_KEY, JSON.stringify(next));
+  }
 
   return (
-    <main className="shell">
+    <main className={showProfileForm ? "shell profileCanvas" : "appCanvas"}>
       {showProfileForm ? (
         <ProfileWizard
           profile={profile}
@@ -177,41 +237,377 @@ export default function Home() {
           canFinish={canFinish}
         />
       ) : (
-        <section className="workspace">
-          <aside className="controlPanel">
-            <div>
-              <p className="eyebrow">Proyecto Brújula v0.7</p>
-              <h1>Informe de Vida</h1>
-            </div>
-
-            <ProfileSummary profile={profile} message={profileMessage} onEdit={() => setIsEditingProfile(true)} onDelete={deleteProfile} />
-
-            <form onSubmit={submit} className="form scenarioForm">
-              <label htmlFor="scenario">Escenario</label>
-              <textarea
-                id="scenario"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                placeholder="Describe el camino que quieres explorar..."
-                rows={9}
-              />
-
-              <label htmlFor="model">Modelo Ollama</label>
-              <input id="model" value={model} onChange={(event) => setModel(event.target.value)} />
-
-              <button type="submit" disabled={isLoading || !text.trim()}>
-                {isLoading ? "Simulando..." : "Ejecutar simulación"}
-              </button>
-            </form>
-
-            {error && <div className="error">{error}</div>}
-          </aside>
-
-          <Results result={result} isLoading={isLoading} />
-        </section>
+        <>
+          <AppNav mode={mode} onMode={setMode} onEditProfile={() => setIsEditingProfile(true)} />
+          {mode === "home" && <ModeLanding profile={profile} onMode={setMode} />}
+          {mode === "garden" && (
+            <GardenMode
+              checkIn={checkIn}
+              indicators={indicators}
+              moodLine={gardenMoodLine(indicators)}
+              recommendation={ritual}
+              outcome={ritualOutcome}
+              onCheckIn={updateCheckIn}
+              onOutcome={recordOutcome}
+            />
+          )}
+          {mode === "journey" && (
+            <JourneyMode
+              profile={profile}
+              profileMessage={profileMessage}
+              text={text}
+              model={model}
+              result={result}
+              error={error}
+              isLoading={isLoading}
+              onText={setText}
+              onModel={setModel}
+              onSubmit={submit}
+              onEditProfile={() => setIsEditingProfile(true)}
+              onDeleteProfile={deleteProfile}
+            />
+          )}
+          <AppFooter />
+        </>
       )}
     </main>
   );
+}
+
+function AppNav({ mode, onMode, onEditProfile }: { mode: Mode; onMode: (mode: Mode) => void; onEditProfile: () => void }) {
+  return (
+    <header className="topBar">
+      <button className="brandButton" type="button" onClick={() => onMode("home")}>Brújula</button>
+      <nav aria-label="Modos de Brújula">
+        <button className={mode === "garden" ? "active" : ""} type="button" onClick={() => onMode("garden")}>Jardín</button>
+        <button className={mode === "journey" ? "active" : ""} type="button" onClick={() => onMode("journey")}>Viaje</button>
+        <button className={mode === "home" ? "active" : ""} type="button" onClick={() => onMode("home")}>Refugio</button>
+      </nav>
+      <button className="iconButton" type="button" onClick={onEditProfile} title="Editar perfil">⚙</button>
+    </header>
+  );
+}
+
+function ModeLanding({ profile, onMode }: { profile: LifeProfile; onMode: (mode: Mode) => void }) {
+  const name = profile.identity.name ? ` de nuevo, ${profile.identity.name}` : " de nuevo";
+  return (
+    <section className="modeLanding">
+      <div className="landingHero">
+        <h1>Bienvenido{name}, ¿qué quieres hacer hoy?</h1>
+        <p>Toma un respiro. Elige el camino que más resuene con tu energía en este momento.</p>
+      </div>
+
+      <div className="modeCards">
+        <article className="modeCard gardenCard">
+          <span className="modeIcon">🌿</span>
+          <h2>Cuidar mi Jardín</h2>
+          <p>Pequeños actos de calma para nutrir tu bienestar hoy.</p>
+          <button type="button" onClick={() => onMode("garden")}>Entrar al Jardín ✨</button>
+        </article>
+
+        <article className="modeCard journeyCard">
+          <span className="modeIcon">◈</span>
+          <h2>Planificar un Viaje</h2>
+          <p>Explora nuevos horizontes y traza el camino hacia tus sueños.</p>
+          <button type="button" onClick={() => onMode("journey")}>Comenzar Viaje ↗</button>
+        </article>
+      </div>
+
+      <section className="promiseAnchor">
+        <span>La Promesa</span>
+        <blockquote>
+          "Brújula es un hogar al que siempre puedas volver. No importa qué tan lejos vayas o qué tan pausado sea tu ritmo, aquí siempre encontrarás tu centro."
+        </blockquote>
+      </section>
+    </section>
+  );
+}
+
+function GardenMode({
+  checkIn,
+  indicators,
+  moodLine,
+  recommendation,
+  outcome,
+  onCheckIn,
+  onOutcome
+}: {
+  checkIn: DailyCheckIn;
+  indicators: GardenIndicator[];
+  moodLine: string;
+  recommendation: RitualRecommendation;
+  outcome: RitualOutcome | null;
+  onCheckIn: (update: Partial<DailyCheckIn>) => void;
+  onOutcome: (completed: boolean, feelingAfter?: number) => void;
+}) {
+  return (
+    <section className="gardenScreen">
+      <div className="screenHeader">
+        <h1>Mi Jardín</h1>
+        <p>Bienvenido de nuevo a tu santuario. Tu vida florece con cada cuidado pequeño.</p>
+      </div>
+
+      <div className="gardenGridLayout">
+        <div className="gardenMain">
+          <section className="glassPanel checkPanel">
+            <h2>🌸 Check-in del día</h2>
+            <div className="rangeGrid">
+              <RangeControl label="Ánimo" icon="☺" value={checkIn.mood} onChange={(value) => onCheckIn({ mood: value })} />
+              <RangeControl label="Energía" icon="⚡" value={checkIn.energy} onChange={(value) => onCheckIn({ energy: value })} />
+              <RangeControl label="Dolor" icon="☁" value={checkIn.pain} onChange={(value) => onCheckIn({ pain: value })} />
+              <RangeControl label="Sueño" icon="☾" value={checkIn.sleepQuality} onChange={(value) => onCheckIn({ sleepQuality: value })} />
+            </div>
+          </section>
+
+          <div className="selectorRow">
+            <ChoicePanel title="¿Cuánto tiempo tienes?">
+              {(["5m", "15m", "30m", "60m"] as GardenTime[]).map((time) => (
+                <button key={time} className={checkIn.availableTime === time ? "chip selected" : "chip"} type="button" onClick={() => onCheckIn({ availableTime: time })}>
+                  {time}
+                </button>
+              ))}
+            </ChoicePanel>
+            <ChoicePanel title="¿Qué necesitas hoy?">
+              {(["energia", "serenidad", "salud", "relaciones", "creatividad"] as GardenNeed[]).map((need) => (
+                <button key={need} className={checkIn.mainNeed === need ? "chip selected" : "chip"} type="button" onClick={() => onCheckIn({ mainNeed: need })}>
+                  {gardenNeedLabel(need)}
+                </button>
+              ))}
+            </ChoicePanel>
+          </div>
+
+          <label className="gardenNote glassPanel">
+            <span>Nota del día</span>
+            <textarea value={checkIn.note} onChange={(event) => onCheckIn({ note: event.target.value })} rows={3} placeholder="Escribe lo que florece en tu mente..." />
+          </label>
+
+          <section className="ritualHero">
+            <img src="/assets/ritual-tea-garden.png" alt="Bebida caliente en un jardín sereno" />
+            <div>
+              <span>Ritual recomendado</span>
+              <h2>{recommendation.ritual.title}</h2>
+              <p>{recommendation.reason}</p>
+              <div className="ritualActions">
+                <button type="button" onClick={() => onOutcome(true, 78)}>Realizado</button>
+                <button className="secondaryButton" type="button" onClick={() => onOutcome(false, 50)}>Después</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside className="gardenAside">
+          <section className="glassPanel gardenStatus">
+            <h2>Estado de tu Jardín</h2>
+            {indicators.map((indicator) => (
+              <div className="statusBar" key={indicator.key}>
+                <div><span>{indicator.icon}</span><strong>{indicator.label}</strong><em>{indicator.value}%</em></div>
+                <progress max={100} value={indicator.value} />
+              </div>
+            ))}
+            <p className="sueWhisper">"{moodLine}"</p>
+          </section>
+
+          <section className="moreCare">
+            <h2>Más cuidados</h2>
+            <div>
+              {recommendation.ritual.steps.map((step) => (
+                <article key={step}>{step}</article>
+              ))}
+            </div>
+          </section>
+
+          {outcome && (
+            <section className="glassPanel outcomePanel">
+              <strong>{outcome.completed ? "Ritual registrado" : "Ritual reservado"}</strong>
+              <p>Sensación posterior: {outcome.feelingAfter}%</p>
+            </section>
+          )}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function JourneyMode({
+  profile,
+  profileMessage,
+  text,
+  model,
+  result,
+  error,
+  isLoading,
+  onText,
+  onModel,
+  onSubmit,
+  onEditProfile,
+  onDeleteProfile
+}: {
+  profile: LifeProfile;
+  profileMessage: string;
+  text: string;
+  model: string;
+  result: SimulationResult | null;
+  error: string;
+  isLoading: boolean;
+  onText: (value: string) => void;
+  onModel: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onEditProfile: () => void;
+  onDeleteProfile: () => void;
+}) {
+  return (
+    <section className="journeyScreen">
+      <header className="journeyHeader">
+        <h1>Planificar un Viaje</h1>
+        <p>Explora el camino hacia tu sueño con tu Perfil de Vida como brújula.</p>
+      </header>
+
+      <form className="journeyInput glassPanel" onSubmit={onSubmit}>
+        <label htmlFor="scenario">¿Cuál es tu destino final?</label>
+        <textarea id="scenario" value={text} onChange={(event) => onText(event.target.value)} rows={4} placeholder="Ej: Dedicarme gradualmente al arte, cuidar mi salud y sostener mis ingresos..." />
+        <div className="journeyControls">
+          <label htmlFor="model">Modelo Ollama</label>
+          <input id="model" value={model} onChange={(event) => onModel(event.target.value)} />
+          <button type="submit" disabled={isLoading || !text.trim()}>{isLoading ? "Trazando ruta..." : "Trazar ruta ✨"}</button>
+        </div>
+      </form>
+
+      {error && <div className="error journeyError">{error}</div>}
+
+      {!result && !isLoading && (
+        <div className="journeyEmpty glassPanel">
+          <ProfileSummary profile={profile} message={profileMessage} onEdit={onEditProfile} onDelete={onDeleteProfile} />
+          <p>Describe un camino posible. Brújula lo transformará en ruta, riesgos, hitos y carta de Sue.</p>
+        </div>
+      )}
+
+      {isLoading && <div className="journeyEmpty glassPanel"><h2>Sue está leyendo el mapa...</h2><p>El motor cruza tu escenario con tu perfil y prepara una ruta clara.</p></div>}
+
+      {result && <JourneyResults result={result} />}
+    </section>
+  );
+}
+
+function JourneyResults({ result }: { result: SimulationResult }) {
+  const probability = Math.round(result.final.compass);
+  const effort = effortFromResult(result);
+  return (
+    <section className="journeyResults">
+      <article className="routeCard glassPanel">
+        <div className="routeHead">
+          <div>
+            <span>Destino</span>
+            <h2>{result.scenario.name}</h2>
+          </div>
+          <div className="probability">
+            <span>Probabilidad</span>
+            <strong>{probability}%</strong>
+            <progress max={100} value={probability} />
+          </div>
+        </div>
+        <p>{result.lifeReport.summary.description}</p>
+        <div className="routeFacts">
+          <div><span>Tiempo estimado</span><strong>{result.scenario.startYear} - {result.scenario.endYear}</strong></div>
+          <div><span>Esfuerzo requerido</span><strong>{effort}</strong></div>
+        </div>
+      </article>
+
+      <div className="riskColumn">
+        <article className="miniInsight advantage"><span>☆</span><h3>Ventaja Principal</h3><p>{result.lifeReport.summary.strongest}</p></article>
+        <article className="miniInsight risk"><span>△</span><h3>Riesgo Crítico</h3><p>{result.lifeReport.summary.mainCare}</p></article>
+      </div>
+
+      <section className="milestoneCard glassPanel">
+        <h3>Hitos de tu Destino</h3>
+        <ol>
+          {result.lifeReport.timeline.slice(0, 4).map((item, index) => (
+            <li key={`${item.year}-${item.title}`}>
+              <span>{index + 1}</span>
+              <div><strong>{item.title}</strong><p>{item.description}</p></div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <article className="sueJourneyLetter glassPanel">
+        <span>Mensaje de tu guía</span>
+        <h3>Carta de Sue</h3>
+        <p>{result.report}</p>
+      </article>
+
+      <details className="advancedJourney glassPanel">
+        <summary>Datos técnicos avanzados</summary>
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Año</th>
+                <th>Brújula</th>
+                <th>Est. fin.</th>
+                <th>Crear</th>
+                <th>Energía</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.states.map((state) => (
+                <tr key={state.year}>
+                  <td>{state.year}</td>
+                  <td>{state.compass.toFixed(1)}%</td>
+                  <td>{state.dashboard["Estabilidad financiera"].toFixed(1)}%</td>
+                  <td>{state.dashboard["Libertad para crear"].toFixed(1)}%</td>
+                  <td>{state.dashboard["Energía diaria"].toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+function ChoicePanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="glassPanel choicePanel">
+      <h3>{title}</h3>
+      <div>{children}</div>
+    </section>
+  );
+}
+
+function RangeControl({ label, icon, value, onChange }: { label: string; icon: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <label className="rangeControl">
+      <span><strong>{label}</strong><em>{icon}</em></span>
+      <input type="range" min={0} max={100} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+    </label>
+  );
+}
+
+function AppFooter() {
+  return (
+    <footer className="appFooter">
+      <strong>Brújula</strong>
+      <p>© 2024 Brújula. Cultivando tu bienestar interior.</p>
+    </footer>
+  );
+}
+
+function gardenNeedLabel(need: GardenNeed) {
+  return {
+    energia: "Energía",
+    serenidad: "Serenidad",
+    salud: "Salud",
+    relaciones: "Relaciones",
+    creatividad: "Creatividad"
+  }[need];
+}
+
+function effortFromResult(result: SimulationResult) {
+  const burnout = result.lifeReport.lifeSummary.riesgoAgotamiento;
+  if (burnout === "Alto") return "Alto";
+  if (result.final.compass >= 78) return "Medio";
+  return "Muy alto";
 }
 
 function ProfileWizard({

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Brújula — Nutriendo tu Jardín</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Newsreader', serif;
+            scroll-behavior: smooth;
+        }
+        
+        .mesh-gradient {
+            background: radial-gradient(at 0% 0%, rgba(191, 232, 203, 0.3) 0px, transparent 50%),
+                        radial-gradient(at 100% 0%, rgba(187, 232, 238, 0.3) 0px, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(242, 199, 219, 0.2) 0px, transparent 50%),
+                        radial-gradient(at 0% 100%, rgba(203, 183, 245, 0.2) 0px, transparent 50%);
+        }
+
+        .ethereal-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .petal-float {
+            animation: float 12s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
+            50% { transform: translateY(-20px) rotate(15deg); opacity: 0.8; }
+        }
+
+        .active-emotion {
+            background-color: #BFE8CB; /* mint-bloom */
+            transform: scale(1.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-fixed": "#001f25",
+                      "surface": "#f4fafc",
+                      "tertiary-fixed": "#e6deff",
+                      "surface-container-high": "#e3e9eb",
+                      "background": "#f4fafc",
+                      "tertiary-fixed-dim": "#cabeff",
+                      "on-primary-fixed-variant": "#004e5a",
+                      "inverse-primary": "#86d2e3",
+                      "secondary": "#2c694e",
+                      "lotus-pink": "#F2C7DB",
+                      "secondary-fixed-dim": "#95d4b3",
+                      "on-tertiary": "#ffffff",
+                      "surface-tint": "#006877",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed-variant": "#0e5138",
+                      "on-tertiary-container": "#5a508a",
+                      "primary-container": "#8edbec",
+                      "soft-lavender": "#5E548E",
+                      "mint-bloom": "#BFE8CB",
+                      "secondary-fixed": "#b1f0ce",
+                      "aqua-mist": "#BBE8EE",
+                      "surface-dim": "#d5dbdd",
+                      "surface-bright": "#f4fafc",
+                      "primary-fixed-dim": "#86d2e3",
+                      "on-tertiary-fixed-variant": "#483f77",
+                      "surface-container-lowest": "#ffffff",
+                      "on-surface": "#161d1e",
+                      "on-background": "#161d1e",
+                      "soft-teal": "#2D6A4F",
+                      "primary-fixed": "#a4eeff",
+                      "surface-variant": "#dde3e5",
+                      "inverse-surface": "#2b3133",
+                      "on-error": "#ffffff",
+                      "crystal-lagoon": "#7ADDF2",
+                      "outline-variant": "#bdc8cc",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#aeeecb",
+                      "tertiary-container": "#d3c8ff",
+                      "surface-container": "#e9eff1",
+                      "on-surface-variant": "#3e494b",
+                      "tertiary": "#605691",
+                      "surface-container-low": "#eff5f7",
+                      "outline": "#6e797c",
+                      "water-lily": "#CBB7F5",
+                      "on-primary-container": "#00616f",
+                      "on-secondary-container": "#316e52",
+                      "primary": "#006877",
+                      "on-secondary-fixed": "#002114",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed": "#1c1149",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#dde3e5",
+                      "error-container": "#ffdad6",
+                      "inverse-on-surface": "#ecf2f4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1200px",
+                      "gutter": "32px",
+                      "stack-md": "2rem",
+                      "margin-desktop": "48px",
+                      "stack-sm": "1rem",
+                      "section-gap": "6rem",
+                      "margin-mobile": "16px",
+                      "stack-lg": "4rem",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "quote": ["Newsreader"],
+                      "headline-lg-mobile": ["Newsreader"],
+                      "headline-xl": ["Newsreader"],
+                      "headline-md": ["Newsreader"],
+                      "headline-lg": ["Newsreader"],
+                      "body-md": ["Newsreader"],
+                      "body-lg": ["Newsreader"],
+                      "label-md": ["Newsreader"],
+                      "display-lg": ["Newsreader"]
+              },
+              "fontSize": {
+                      "quote": ["26px", {"lineHeight": "40px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                      "headline-xl": ["52px", {"lineHeight": "60px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                      "headline-md": ["26px", {"lineHeight": "34px", "fontWeight": "500"}],
+                      "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "400"}],
+                      "body-md": ["17px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "300"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface overflow-x-hidden min-h-screen mesh-gradient flex flex-col">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/40 dark:bg-black/40 backdrop-blur-md border-b border-white/20">
+<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<span class="font-headline-md text-headline-md text-primary tracking-wider">Brújula</span>
+<div class="hidden md:flex gap-8">
+<a class="font-body-md text-body-md text-primary border-b-2 border-mint-bloom pb-1" href="#">Jardín</a>
+<a class="font-body-md text-body-md text-on-surface-variant/70 hover:text-primary transition-colors duration-300" href="#">Viaje</a>
+<a class="font-body-md text-body-md text-on-surface-variant/70 hover:text-primary transition-colors duration-300" href="#">Refugio</a>
+</div>
+<div class="flex gap-4 items-center">
+<button class="material-symbols-outlined text-primary hover:scale-95 transition-transform duration-200">settings</button>
+<div class="w-10 h-10 rounded-full border border-white shadow-sm overflow-hidden bg-white/60">
+<img class="w-full h-full object-cover" data-alt="A soft, professional close-up portrait of a serene person with soft lighting, reflecting a calm and balanced aura. The style is minimalist and high-end, using the Brújula palette of mint and soft lavender tones, perfectly suited for a wellness application avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrTUD9OOzSkw6-mcGBwMHrlY_Ikap3L3ZhC0jNtIannNESMI6X3p4Baks4t1mn_jz_sL_1YXMlZtrLzIPoU03Sv4X4yHL-w-XuQpflZhnlB2DxxC63pW9u40jgiPSYxNoFhBfDwY4kUBoXgDPt25_BnvF6jNca1phu3c02V8owvOcszmwU8lXPvynXyxysH_DLE-dUCn2bAeFjxK-EiH2B2ELgHKobzu2c-qQkxydWoAdwkFO1p3y9Rg"/>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-32 pb-section-gap px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full relative">
+<!-- Subtle Decorative Background Elements -->
+<div class="absolute top-20 right-10 petal-float pointer-events-none opacity-40">
+<span class="material-symbols-outlined text-mint-bloom text-5xl">filter_vintage</span>
+</div>
+<div class="absolute bottom-40 left-10 petal-float pointer-events-none opacity-30" style="animation-delay: 2s;">
+<span class="material-symbols-outlined text-lotus-pink text-4xl">energy_savings_leaf</span>
+</div>
+<div class="absolute top-1/2 left-1/4 petal-float pointer-events-none opacity-20" style="animation-delay: 5s;">
+<span class="material-symbols-outlined text-aqua-mist text-3xl">flare</span>
+</div>
+<section class="max-w-3xl mx-auto flex flex-col items-center">
+<!-- Content Card -->
+<div class="ethereal-card w-full p-8 md:p-16 rounded-xl shadow-lg shadow-primary/5 text-center flex flex-col items-center gap-stack-md animate-in fade-in slide-in-from-bottom-8 duration-1000">
+<div class="w-16 h-16 rounded-full bg-mint-bloom flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-soft-teal text-4xl">local_florist</span>
+</div>
+<div class="space-y-stack-sm">
+<h1 class="font-headline-lg text-headline-lg md:text-headline-xl text-primary">Nutriendo tu jardín</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant italic opacity-80">Ritual: Caminar 15 minutos</p>
+</div>
+<!-- Emotional Selector -->
+<div class="w-full mt-stack-md">
+<p class="font-body-md text-body-md text-on-surface mb-stack-sm">¿Cómo te sentiste después de este momento?</p>
+<div class="flex justify-center gap-4 md:gap-8 py-4">
+<button class="group flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-300 hover:bg-white/50" onclick="selectEmotion(this)">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary transition-colors">sentiment_calm</span>
+<span class="font-label-md text-label-md opacity-60">En paz</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-300 hover:bg-white/50" onclick="selectEmotion(this)">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary transition-colors">sentiment_satisfied</span>
+<span class="font-label-md text-label-md opacity-60">Radiante</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-300 hover:bg-white/50" onclick="selectEmotion(this)">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary transition-colors">sentiment_neutral</span>
+<span class="font-label-md text-label-md opacity-60">Presente</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-300 hover:bg-white/50" onclick="selectEmotion(this)">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary transition-colors">eco</span>
+<span class="font-label-md text-label-md opacity-60">Renovado</span>
+</button>
+</div>
+</div>
+<!-- Submit Action -->
+<button class="mt-stack-md px-12 py-5 bg-primary text-on-primary rounded-full font-label-md text-label-md tracking-widest uppercase hover:bg-primary/90 transition-all duration-300 flex items-center gap-3 shadow-lg shadow-primary/20 active:scale-95 group">
+                    Guardar en mi diario
+                    <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+<!-- Promise Anchor (Sue's Message) -->
+<div class="mt-section-gap w-full max-w-2xl px-12 py-8 rounded-full border border-white/40 bg-surface-container-low/30 backdrop-blur-sm text-center animate-pulse-slow">
+<p class="font-quote text-quote italic text-soft-lavender">
+                    "Cada pequeña semilla cuenta. Tu jardín brilla un poco más ahora."
+                </p>
+<p class="font-label-md text-label-md text-on-surface-variant/60 mt-2 tracking-widest">— Sue, tu guía de paz</p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-stack-lg rounded-t-full bg-surface-container-low/50 backdrop-blur-sm mt-auto">
+<div class="flex flex-col items-center gap-stack-md px-margin-desktop max-w-container-max mx-auto text-center">
+<span class="font-headline-md text-headline-md text-primary">Brújula</span>
+<div class="flex gap-8">
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-opacity duration-300" href="#">Privacidad</a>
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-opacity duration-300" href="#">Inspiración</a>
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-opacity duration-300" href="#">Contacto</a>
+</div>
+<p class="font-body-md text-body-md italic font-quote text-on-surface-variant">© 2024 Brújula — Tu santuario digital de paz.</p>
+</div>
+</footer>
+<script>
+        function selectEmotion(element) {
+            // Clear all active states
+            const buttons = element.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.classList.remove('active-emotion');
+                btn.querySelector('span:first-child').classList.remove('text-primary');
+                btn.querySelector('span:first-child').classList.add('text-on-surface-variant');
+            });
+
+            // Add active state to clicked
+            element.classList.add('active-emotion');
+            element.querySelector('span:first-child').classList.remove('text-on-surface-variant');
+            element.querySelector('span:first-child').classList.add('text-primary');
+            
+            // Subtle click effect
+            element.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1.1)';
+            }, 100);
+        }
+
+        // Micro-interaction for the petals or sparkles
+        document.addEventListener('mousemove', (e) => {
+            const sparkles = document.querySelectorAll('.petal-float');
+            const x = (window.innerWidth - e.pageX) / 50;
+            const y = (window.innerHeight - e.pageY) / 50;
+            sparkles.forEach(s => {
+                s.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Brújula — Check-in Diario</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.5);
+        }
+        body {
+            font-family: 'Newsreader', serif;
+            background: radial-gradient(circle at top left, #f4fafc 0%, #BFE8CB 30%, #F2C7DB 70%, #f4fafc 100%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 104, 119, 0.05);
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            background: rgba(0, 104, 119, 0.1);
+            height: 4px;
+            border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -10px;
+            background-color: #006877;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-fixed": "#001f25",
+                      "surface": "#f4fafc",
+                      "tertiary-fixed": "#e6deff",
+                      "surface-container-high": "#e3e9eb",
+                      "background": "#f4fafc",
+                      "tertiary-fixed-dim": "#cabeff",
+                      "on-primary-fixed-variant": "#004e5a",
+                      "inverse-primary": "#86d2e3",
+                      "secondary": "#2c694e",
+                      "lotus-pink": "#F2C7DB",
+                      "secondary-fixed-dim": "#95d4b3",
+                      "on-tertiary": "#ffffff",
+                      "surface-tint": "#006877",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed-variant": "#0e5138",
+                      "on-tertiary-container": "#5a508a",
+                      "primary-container": "#8edbec",
+                      "soft-lavender": "#5E548E",
+                      "mint-bloom": "#BFE8CB",
+                      "secondary-fixed": "#b1f0ce",
+                      "aqua-mist": "#BBE8EE",
+                      "surface-dim": "#d5dbdd",
+                      "surface-bright": "#f4fafc",
+                      "primary-fixed-dim": "#86d2e3",
+                      "on-tertiary-fixed-variant": "#483f77",
+                      "surface-container-lowest": "#ffffff",
+                      "on-surface": "#161d1e",
+                      "on-background": "#161d1e",
+                      "soft-teal": "#2D6A4F",
+                      "primary-fixed": "#a4eeff",
+                      "surface-variant": "#dde3e5",
+                      "inverse-surface": "#2b3133",
+                      "on-error": "#ffffff",
+                      "crystal-lagoon": "#7ADDF2",
+                      "outline-variant": "#bdc8cc",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#aeeecb",
+                      "tertiary-container": "#d3c8ff",
+                      "surface-container": "#e9eff1",
+                      "on-surface-variant": "#3e494b",
+                      "tertiary": "#605691",
+                      "surface-container-low": "#eff5f7",
+                      "outline": "#6e797c",
+                      "water-lily": "#CBB7F5",
+                      "on-primary-container": "#00616f",
+                      "on-secondary-container": "#316e52",
+                      "primary": "#006877",
+                      "on-secondary-fixed": "#002114",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed": "#1c1149",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#dde3e5",
+                      "error-container": "#ffdad6",
+                      "inverse-on-surface": "#ecf2f4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1200px",
+                      "gutter": "32px",
+                      "stack-md": "2rem",
+                      "margin-desktop": "48px",
+                      "stack-sm": "1rem",
+                      "section-gap": "6rem",
+                      "margin-mobile": "16px",
+                      "stack-lg": "4rem",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "quote": ["Newsreader"],
+                      "headline-lg-mobile": ["Newsreader"],
+                      "headline-xl": ["Newsreader"],
+                      "headline-md": ["Newsreader"],
+                      "headline-lg": ["Newsreader"],
+                      "body-md": ["Newsreader"],
+                      "body-lg": ["Newsreader"],
+                      "label-md": ["Newsreader"],
+                      "display-lg": ["Newsreader"]
+              },
+              "fontSize": {
+                      "quote": ["26px", {"lineHeight": "40px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                      "headline-xl": ["52px", {"lineHeight": "60px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                      "headline-md": ["26px", {"lineHeight": "34px", "fontWeight": "500"}],
+                      "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "400"}],
+                      "body-md": ["17px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "300"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="min-h-screen text-on-surface selection:bg-mint-bloom selection:text-primary">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/40 backdrop-blur-md border-b border-white/20">
+<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<span class="font-headline-md text-headline-md text-primary tracking-wider">Brújula</span>
+<div class="hidden md:flex items-center gap-stack-md">
+<a class="text-primary border-b-2 border-mint-bloom pb-1 font-body-md text-body-md transition-colors duration-300" href="#">Jardín</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md transition-colors duration-300" href="#">Viaje</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md transition-colors duration-300" href="#">Refugio</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:scale-110 transition-transform">settings</button>
+<div class="w-10 h-10 rounded-full border border-white/40 overflow-hidden shadow-lg shadow-primary/10">
+<img class="w-full h-full object-cover" data-alt="A portrait of a serene person looking directly into the camera with a gentle smile. The lighting is soft and diffused, highlighting a light-mode aesthetic. The background is a blurred garden scene with soft pastel greens and pinks, following the peaceful, ethereal brand identity of Brújula." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtEsR3msiZXdIg99w8EDAScqlUzA3vs6R8aJZytpFZ9oBC-39_kjYPdbEaxG-fadENrf-WGLfiORtndpzb3m9kZfhUth7jbFsZCNw_KloU3J7GV7QvgIpA887wfxnQtYvEybl9ONTje9yADBG4pCASm2cnIhnKLNoZE0B0MF2YaaLKsla-TrxqizrLTvMetciTHNKx0kze7Wdm5-qxbfKaQzLrO9h7Nfu5t7MrzN8rMXjR_sSmlRrFKw"/>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-32 pb-section-gap px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Daily Check-in Form (Left/Center) -->
+<section class="lg:col-span-8 flex flex-col gap-stack-lg">
+<header class="text-center md:text-left">
+<h1 class="font-headline-xl text-headline-xl text-primary-fixed-dim md:text-headline-xl italic">¿Cómo está tu jardín hoy?</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant/80 mt-stack-sm">Tómate un momento para observar tu interior con amabilidad.</p>
+</header>
+<div class="glass-card rounded-xl p-8 md:p-12 flex flex-col gap-stack-md">
+<!-- Visual Questionnaire Sliders -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-md text-label-md text-on-surface-variant">Ánimo</label>
+<span class="material-symbols-outlined text-primary">sentiment_satisfied</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="50"/>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-md text-label-md text-on-surface-variant">Energía</label>
+<span class="material-symbols-outlined text-primary">bolt</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="50"/>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-md text-label-md text-on-surface-variant">Bienestar Físico</label>
+<span class="material-symbols-outlined text-primary">spa</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="50"/>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-md text-label-md text-on-surface-variant">Calidad de Sueño</label>
+<span class="material-symbols-outlined text-primary">nights_stay</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="50"/>
+</div>
+</div>
+<!-- Time Selection -->
+<div class="flex flex-col gap-stack-sm mt-4">
+<label class="font-label-md text-label-md text-on-surface-variant">Tiempo disponible</label>
+<div class="flex flex-wrap gap-4">
+<button class="px-8 py-3 rounded-full border border-primary/20 bg-white/20 hover:bg-primary/10 transition-all font-label-md text-label-md active:scale-95">5m</button>
+<button class="px-8 py-3 rounded-full border border-primary bg-primary text-white font-label-md text-label-md shadow-lg shadow-primary/20">15m</button>
+<button class="px-8 py-3 rounded-full border border-primary/20 bg-white/20 hover:bg-primary/10 transition-all font-label-md text-label-md active:scale-95">30m</button>
+<button class="px-8 py-3 rounded-full border border-primary/20 bg-white/20 hover:bg-primary/10 transition-all font-label-md text-label-md active:scale-95">60m</button>
+</div>
+</div>
+<!-- Need Selection -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-label-md text-label-md text-on-surface-variant">Necesidad principal</label>
+<div class="flex flex-wrap gap-3">
+<button class="px-6 py-2 rounded-full border border-primary/10 bg-mint-bloom/30 text-primary-fixed-dim font-label-md text-label-md hover:bg-mint-bloom/50 transition-colors">Energía</button>
+<button class="px-6 py-2 rounded-full border border-primary/10 bg-aqua-mist/30 text-primary font-label-md text-label-md hover:bg-aqua-mist/50 transition-colors">Serenidad</button>
+<button class="px-6 py-2 rounded-full border border-primary/10 bg-white/40 text-on-surface-variant font-label-md text-label-md hover:bg-white/60 transition-colors">Salud</button>
+<button class="px-6 py-2 rounded-full border border-primary/10 bg-lotus-pink/30 text-soft-lavender font-label-md text-label-md hover:bg-lotus-pink/50 transition-colors">Relaciones</button>
+<button class="px-6 py-2 rounded-full border border-primary/10 bg-tertiary-container/30 text-tertiary font-label-md text-label-md hover:bg-tertiary-container/50 transition-colors">Creatividad</button>
+</div>
+</div>
+<!-- Optional Note -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-label-md text-label-md text-on-surface-variant">Nota del día (opcional)</label>
+<textarea class="w-full bg-white/30 border-white/40 rounded-lg font-body-md text-body-md p-4 focus:ring-primary focus:border-primary placeholder:text-on-surface-variant/40" placeholder="Escribe lo que florece en tu mente..." rows="3"></textarea>
+</div>
+<!-- CTA -->
+<div class="pt-8 flex justify-center">
+<button class="group flex items-center gap-3 px-12 py-5 bg-primary text-white rounded-full font-label-md text-label-md tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            ESCUCHAR A SUE
+                            <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Sue's Whisper Sidebar -->
+<aside class="lg:col-span-4 flex flex-col gap-stack-md">
+<div class="sticky top-32">
+<div class="glass-card rounded-xl p-8 flex flex-col gap-stack-sm relative overflow-hidden">
+<!-- Decorative Aura Background -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-mint-bloom rounded-full blur-3xl opacity-40"></div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">auto_awesome</span>
+<h2 class="font-headline-md text-headline-md text-primary">El Susurro de Sue</h2>
+</div>
+<div class="mt-4 flex flex-col gap-stack-sm">
+<p class="font-quote text-quote italic text-on-surface-variant">
+                                "Incluso el jardín más salvaje encuentra su paz al amanecer. No te presiones por florecer hoy; a veces, solo ser tierra es suficiente."
+                            </p>
+<div class="h-px bg-white/40 w-16 my-2"></div>
+<p class="font-body-md text-body-md text-on-surface-variant/70">
+                                Siento que hoy buscas un refugio de calma. Al terminar tu check-in, tengo preparada una visualización de 15 minutos en el estanque de los lotos para ti.
+                            </p>
+</div>
+<div class="mt-8 rounded-lg overflow-hidden h-48 relative border border-white/40 shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A macro photograph of a single dewdrop on a soft green leaf at dawn. The morning light is diffused and soft, creating a bokeh effect with pastel colors in the background. The aesthetic is extremely peaceful, clean, and minimalist, perfectly aligned with the serene gardening theme of the Brújula app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcL9tYx3PG2RYETREXZZpdNCmi4Kg7UQvqqIVbjR_ezX31_rej_da9bzyJCa1uCgRqNzPFkdBZQz0_tJ41o3bMNow1CMLakwoj3po3FnBoEJ_Wzl7yKzwhu95TGHWTQONehz5uN5WMKjCpRdQVCd8CfIGjI1IkfSaoNhJTX2VdUKP-pVJPy1L6zL9o2TI-BnE3f5LQv6u4uEJ8Zu7DUW5_GhOfHXzB5oC6iXQ7VMMXFw02h_zbzm8C3A"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
+</div>
+</div>
+<!-- Secondary card for motivation -->
+<div class="mt-stack-md glass-card rounded-xl p-6 flex items-center gap-4 bg-white/20">
+<div class="w-12 h-12 flex-shrink-0 bg-mint-bloom/40 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary">Racha de Cuidado</h3>
+<p class="font-body-md text-body-md">5 días seguidos cultivando tu paz.</p>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-section-gap rounded-t-full bg-surface-container-low/50 backdrop-blur-sm mt-section-gap">
+<div class="flex flex-col items-center gap-stack-md px-margin-desktop max-w-container-max mx-auto text-center">
+<span class="font-headline-md text-headline-md text-primary">Brújula</span>
+<p class="font-body-md text-body-md italic font-quote text-on-surface-variant">© 2024 Brújula — Tu santuario digital de paz.</p>
+<div class="flex gap-stack-md">
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-colors" href="#">Privacidad</a>
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-colors" href="#">Inspiración</a>
+<a class="font-body-md text-body-md text-on-surface-variant/60 hover:text-primary transition-colors" href="#">Contacto</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const value = e.target.value;
+                const icon = e.target.parentElement.querySelector('.material-symbols-outlined');
+                // Subtle scale effect on icon based on value
+                const scale = 1 + (value / 200);
+                icon.style.transform = `scale(${scale})`;
+            });
+        });
+
+        // Pill button selection logic
+        const buttons = document.querySelectorAll('.flex-wrap button');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Determine if it's part of Time or Need selection (simplified for demo)
+                const siblings = this.parentElement.querySelectorAll('button');
+                siblings.forEach(s => {
+                    s.classList.remove('bg-primary', 'text-white', 'shadow-lg');
+                    if(s.classList.contains('border-primary')) {
+                        // Reset to inactive state style
+                        s.classList.add('bg-white/20');
+                    }
+                });
+                this.classList.add('bg-primary', 'text-white', 'shadow-lg');
+            });
+        });
+    </script>
+</body></html>

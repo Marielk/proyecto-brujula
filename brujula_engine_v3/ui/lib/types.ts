@@ -173,3 +173,49 @@ export type SimulationResult = {
     model: string;
   };
 };
+
+export type GardenNeed = "energia" | "serenidad" | "salud" | "relaciones" | "creatividad";
+export type GardenTime = "5m" | "15m" | "30m" | "60m";
+
+export type DailyCheckIn = {
+  mood: number;
+  energy: number;
+  pain: number;
+  sleepQuality: number;
+  availableTime: GardenTime;
+  mainNeed: GardenNeed;
+  note: string;
+  createdAt: string;
+};
+
+export type GardenIndicator = {
+  key: GardenNeed;
+  label: string;
+  icon: string;
+  value: number;
+  description: string;
+};
+
+export type Ritual = {
+  id: string;
+  title: string;
+  duration: GardenTime;
+  need: GardenNeed;
+  icon: string;
+  steps: string[];
+};
+
+export type RitualRecommendation = {
+  ritual: Ritual;
+  reason: string;
+  expectedEffect: GardenNeed[];
+  intensity: "suave" | "media";
+};
+
+export type RitualOutcome = {
+  ritualId: string;
+  completed: boolean;
+  feelingAfter: number;
+  note: string;
+  createdAt: string;
+};
