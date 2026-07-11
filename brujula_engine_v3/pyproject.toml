@@ -1,0 +1,12 @@
+[project]
+name = "brujula-engine"
+version = "3.0.0"
+description = "Motor transparente para simular escenarios de Proyecto Brújula con lectura local vía Ollama."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+brujula = "brujula_engine.simulation.run:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

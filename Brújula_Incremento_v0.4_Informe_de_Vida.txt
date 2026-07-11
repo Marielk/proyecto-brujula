@@ -1,0 +1,271 @@
+BRÚJULA
+
+Especificación Técnica
+
+Incremento de Producto v0.4
+
+Nombre: Informe de Vida v1
+
+Estado: Aprobado para desarrollo
+
+------------------------------------------------------------------------
+
+Objetivo
+
+Evolucionar la versión actual de Brújula mediante un incremento pequeño
+e interactivo, sin reemplazar la arquitectura existente.
+
+El objetivo NO es rediseñar completamente el producto.
+
+El objetivo es mejorar la comprensión del resultado de una simulación
+manteniendo el motor actual.
+
+Se seguirá una estrategia iterativa basada en versiones pequeñas y
+funcionales.
+
+------------------------------------------------------------------------
+
+Problema detectado
+
+La simulación actual entrega:
+
+-   porcentaje Brújula
+-   ahorro
+-   deuda
+-   tabla anual
+-   lectura generada por IA
+
+Durante las pruebas se observó que:
+
+-   el porcentaje Brújula no tiene significado para el usuario
+-   la tabla requiere demasiado esfuerzo para interpretarla
+-   el usuario no comprende rápidamente qué ocurrió en la simulación
+-   la respuesta se percibe como un informe financiero y no como una
+    guía de vida
+
+------------------------------------------------------------------------
+
+Objetivo UX
+
+El usuario debe ser capaz de comprender el resultado completo en menos
+de 30 segundos.
+
+Debe responder naturalmente preguntas como:
+
+-   ¿Este camino parece saludable?
+-   ¿Qué estoy ganando?
+-   ¿Qué estoy sacrificando?
+-   ¿Qué debería cuidar?
+
+Sin leer toda la tabla.
+
+------------------------------------------------------------------------
+
+Alcance del incremento v0.4
+
+NO modificar:
+
+-   motor de simulación
+-   reglas
+-   arquitectura
+-   API
+
+Modificar únicamente la presentación del resultado.
+
+------------------------------------------------------------------------
+
+Nuevos componentes
+
+1.  Resumen del camino
+
+Agregar una tarjeta superior con:
+
+Título
+
+Estado del camino
+
+Descripción corta.
+
+Ejemplo:
+
+Camino prometedor
+
+Este escenario se alinea muy bien con tus sueños, pero requerirá cuidar
+tu salud física durante los primeros años.
+
+------------------------------------------------------------------------
+
+2.  Índices de Vida
+
+Reemplazar los indicadores actuales por indicadores comprensibles.
+
+Mostrar:
+
+-   Calidad de vida
+-   Libertad financiera
+-   Libertad creativa
+-   Salud integral
+-   Energía vital
+-   Relaciones
+-   Propósito
+-   Riesgo de agotamiento
+
+Cada indicador debe mostrar:
+
+-   porcentaje
+-   color
+-   nivel textual
+
+Ejemplo
+
+82%
+
+Nivel: Muy sólido
+
+------------------------------------------------------------------------
+
+3.  Colores
+
+0-29 Rojo
+
+30-49 Naranjo
+
+50-69 Amarillo
+
+70-84 Verde
+
+85-100 Azul
+
+No mostrar únicamente colores.
+
+Siempre acompañar con texto.
+
+------------------------------------------------------------------------
+
+4.  Línea de tiempo
+
+Reemplazar la tabla por una línea de tiempo resumida.
+
+Ejemplo
+
+2028 Comienzas el emprendimiento
+
+2029 Disminuye tu estabilidad financiera
+
+2030 Aumenta tu libertad creativa
+
+2032 La situación comienza a estabilizarse
+
+Mantener la tabla disponible como información avanzada (colapsable).
+
+------------------------------------------------------------------------
+
+5.  Lectura humana
+
+Cambiar el nombre
+
+“Lectura Ollama”
+
+por
+
+“Interpretación”
+
+En versiones futuras pasará a llamarse “Carta de Sue”.
+
+------------------------------------------------------------------------
+
+6.  Próximos pasos
+
+Mantener máximo cinco recomendaciones.
+
+Cada recomendación debe ser:
+
+-   específica
+-   pequeña
+-   fácil de ejecutar
+-   coherente con el escenario
+
+No sugerir cambios drásticos.
+
+------------------------------------------------------------------------
+
+Cálculo de nuevos índices
+
+Los índices pueden calcularse inicialmente mediante reglas simples.
+
+Calidad de vida
+
+Combina:
+
+-   salud
+-   energía
+-   relaciones
+-   propósito
+
+Libertad financiera
+
+Combina:
+
+-   ahorro
+-   deuda
+-   ingresos
+-   gastos
+
+Libertad creativa
+
+Combina:
+
+-   tiempo disponible
+-   energía
+-   propósito
+
+Salud integral
+
+Combina:
+
+-   capacidad física
+-   energía
+
+Riesgo de agotamiento
+
+Derivado de:
+
+-   energía
+-   carga laboral
+-   tiempo libre
+
+Los pesos podrán refinarse en versiones posteriores.
+
+------------------------------------------------------------------------
+
+Requisitos técnicos
+
+-   No romper compatibilidad con escenarios existentes.
+-   Mantener formato JSON actual.
+-   Agregar una capa de transformación ViewModel entre el motor y la UI.
+-   Centralizar los cálculos de índices en un módulo independiente.
+-   Evitar lógica de presentación dentro del motor de simulación.
+
+------------------------------------------------------------------------
+
+Criterios de aceptación
+
+La versión será aceptada cuando:
+
+-   El usuario entienda el resultado principal en menos de 30 segundos.
+-   El resumen explique claramente el escenario.
+-   Los nuevos índices sean visibles y fáciles de interpretar.
+-   La tabla anual quede como información secundaria.
+-   La interpretación sea coherente con los indicadores.
+-   No se modifique el comportamiento del motor existente.
+
+------------------------------------------------------------------------
+
+Resultado esperado
+
+Esta versión NO busca hacer Brújula más inteligente.
+
+Busca hacer Brújula mucho más comprensible.
+
+Representa el primer paso para transformar un simulador técnico en una
+experiencia de acompañamiento.

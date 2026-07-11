@@ -1,0 +1,767 @@
+
+BRÚJULA
+RFC-0009
+Informe de Vida v0.6 — Presentación visual, narrativa y LifeSummary
+
+Estado: Aprobado para desarrollo
+Origen: Iteración sobre RFC-0008
+Objetivo: Hacer que la respuesta de una simulación se entienda como una guía de vida, no como un reporte financiero o técnico.
+
+======================================================================
+1. OBJETIVO DEL INCREMENTO
+======================================================================
+
+La versión actual del Informe de Vida ya organiza mejor la información, pero todavía se siente como un dashboard de indicadores.
+
+Esta iteración debe transformar la salida de la simulación en una experiencia más cercana a lo que definimos para Brújula:
+
+- clara;
+- humana;
+- esperanzadora;
+- visualmente amistosa;
+- comprensible en menos de 30 segundos;
+- alineada con la metáfora del Jardín;
+- útil incluso cuando el escenario sea desfavorable.
+
+No se busca rehacer todo el producto.
+Se busca incorporar una nueva capa de presentación sobre el resultado existente.
+
+======================================================================
+2. PRINCIPIO DE DISEÑO
+======================================================================
+
+Los indicadores no son el resultado final.
+
+Los indicadores son evidencia que sostiene una historia.
+
+La pantalla debe responder primero:
+
+“¿Qué vida estoy construyendo si sigo este camino?”
+
+Y solo después mostrar números, tablas o detalles técnicos.
+
+======================================================================
+3. ESTRUCTURA NUEVA DEL INFORME
+======================================================================
+
+La pantalla de resultado debe organizarse en seis niveles.
+
+----------------------------------------------------------------------
+NIVEL 1 — RESUMEN INMEDIATO
+----------------------------------------------------------------------
+
+Debe aparecer arriba de todo.
+
+No debe ser solo un porcentaje.
+Debe ser un diagnóstico breve.
+
+Debe entenderse en menos de cinco segundos.
+
+Formato esperado:
+
+Tu Brújula
+
+🌿 Camino prometedor
+
+Este escenario está muy alineado con tus sueños,
+pero necesitará cuidar especialmente tu salud física
+durante los primeros años.
+
+Estados sugeridos:
+
+🌿 Camino prometedor
+El escenario se alinea bien con la vida que la persona quiere construir.
+
+🌱 Camino en construcción
+El escenario tiene potencial, pero necesita bases más sólidas.
+
+🍂 Camino exigente
+El escenario puede funcionar, pero exige muchos cuidados y sacrificios.
+
+❄️ Camino de pausa
+El escenario sugiere esperar, fortalecer bases o reducir riesgo antes de avanzar.
+
+⚠️ Camino riesgoso
+El escenario podría alejar a la persona de su estabilidad, salud o propósito.
+
+El resumen inmediato siempre debe incluir:
+
+1. Diagnóstico del camino.
+2. Mayor fortaleza.
+3. Principal cuidado.
+
+Ejemplo:
+
+🌿 Camino prometedor
+
+Este camino fortalece tu libertad creativa y tu sentido de propósito.
+El cuidado principal será proteger tu salud física y evitar que el proyecto crezca más rápido que tu energía.
+
+----------------------------------------------------------------------
+NIVEL 2 — ÍNDICES DE VIDA
+----------------------------------------------------------------------
+
+Los índices deben presentarse de forma visual, amistosa y comprensible.
+
+No deben parecer variables técnicas.
+
+Mostrar tarjetas con:
+
+- nombre del índice;
+- icono;
+- porcentaje o nivel;
+- color;
+- explicación breve en lenguaje humano.
+
+Índices principales:
+
+1. Calidad de Vida
+2. Libertad Financiera
+3. Libertad Creativa
+4. Salud Integral
+5. Energía Vital
+6. Fortaleza de Relaciones
+7. Propósito
+8. Riesgo de Agotamiento
+9. Probabilidad de Arrepentimiento
+10. Coherencia con la Estrella del Norte
+
+Ejemplo visual:
+
+Calidad de Vida
+🟢 82%
+Nivel: Sólida
+Este camino parece agradable y sostenible en el tiempo.
+
+Libertad Financiera
+🟡 54%
+Nivel: En construcción
+Hay avances, pero todavía existen dependencias y deudas que limitan tu margen de decisión.
+
+Libertad Creativa
+🟢 91%
+Nivel: Muy alta
+Este escenario abre mucho espacio para crear y construir proyectos propios.
+
+Salud Integral
+🟠 43%
+Nivel: Frágil
+Tu cuerpo podría necesitar más cuidado para sostener este camino.
+
+Energía Vital
+🟡 61%
+Nivel: Intermedia
+Tienes energía suficiente para avanzar, pero necesitas recuperación constante.
+
+Fortaleza de Relaciones
+🔵 92%
+Nivel: Fortaleza
+La red afectiva aparece como un gran soporte del camino.
+
+Propósito
+🔵 98%
+Nivel: Muy alineado
+Este escenario conecta profundamente con la vida que quieres construir.
+
+Riesgo de Agotamiento
+🟠 Medio
+Este camino puede volverse exigente si no proteges descanso, salud y límites.
+
+Probabilidad de Arrepentimiento
+🟢 Muy baja
+El escenario parece coherente con tus valores y sueños de largo plazo.
+
+Coherencia con la Estrella del Norte
+🔵 Excelente
+El camino se parece mucho a la vida que declaraste querer cultivar.
+
+----------------------------------------------------------------------
+NIVELES VISUALES
+----------------------------------------------------------------------
+
+Usar los siguientes niveles:
+
+0–29
+🔴 Crítico
+
+30–49
+🟠 Frágil
+
+50–69
+🟡 En construcción
+
+70–84
+🟢 Sólido
+
+85–100
+🔵 Fortaleza
+
+Importante:
+Nunca usar solo color.
+Siempre acompañar con texto.
+
+----------------------------------------------------------------------
+NIVEL 3 — HISTORIA DEL CAMINO
+----------------------------------------------------------------------
+
+Reemplazar la tabla como elemento principal.
+
+La tabla anual puede mantenerse, pero debe quedar colapsada como detalle avanzado.
+
+La línea de tiempo debe mostrar solo hitos relevantes.
+
+No mostrar años que no agregan información.
+
+Formato esperado:
+
+2027
+🌱 Plantas la semilla de Brújula.
+Empiezas a darle forma a una idea que conecta creatividad, tecnología y ayuda a otros.
+
+────────────
+
+2028
+🎓 Terminas Ingeniería.
+Recuperas tiempo y energía para pensar con más libertad.
+
+────────────
+
+2029
+✨ Construyes el primer prototipo.
+El proyecto empieza a existir fuera de tu imaginación.
+
+────────────
+
+2030
+🌸 Aparecen los primeros usuarios.
+Brújula deja de ser solo tuya y comienza a acompañar a otras personas.
+
+────────────
+
+2031
+⚠️ Comienzas a trabajar demasiado.
+Sue te recuerda que una vida coherente también necesita descanso.
+
+────────────
+
+2032
+🌳 El proyecto empieza a sostenerse.
+El jardín gana raíces más profundas.
+
+Reglas:
+
+- Máximo 6 a 8 hitos.
+- Usar lenguaje humano.
+- Mostrar causas y consecuencias.
+- Evitar frases repetidas como “el escenario se mantiene estable”.
+- Si un año no aporta, no se muestra.
+
+----------------------------------------------------------------------
+NIVEL 4 — EVOLUCIÓN DE TU JARDÍN
+----------------------------------------------------------------------
+
+Aquí los indicadores deben representarse visualmente como una primera aproximación al Jardín de Vida.
+
+En esta versión se pueden usar barras simples, pero con lenguaje de jardín.
+
+Ejemplo:
+
+🌳 Salud
+■■■■□□□□□□
+Tu cuerpo necesita más cuidado para sostener este camino.
+
+🌼 Creatividad
+■■■■■■■■■□
+Tu capacidad creativa florece mucho en este escenario.
+
+🏡 Relaciones
+■■■■■■■■■■
+Tus vínculos aparecen como un refugio fuerte.
+
+💰 Libertad financiera
+■■■■■□□□□□
+Aún hay raíces financieras que fortalecer.
+
+🌙 Serenidad
+■■■■■■□□□□
+Hay calma posible, pero requiere límites y descanso.
+
+En el futuro estas barras podrán transformarse en árboles, flores, caminos, estanques o rincones del jardín.
+
+Regla:
+La evolución visual del jardín debe ayudar a comprender, no decorar.
+
+----------------------------------------------------------------------
+NIVEL 5 — REFLEXIÓN DE SUE
+----------------------------------------------------------------------
+
+Cambiar el bloque “Lectura Ollama” o “Interpretación IA” por:
+
+Carta de Sue
+
+No debe sonar como informe.
+Debe sonar como una carta cariñosa, breve y clara.
+
+Ejemplo:
+
+Querida Mariel:
+
+Mientras caminábamos por este futuro imaginario,
+me di cuenta de algo.
+
+Construir Brújula parece acercarte mucho a la vida que sueñas.
+Sin embargo, también vi algunos inviernos donde trabajabas tanto
+que olvidabas cuidar de ti.
+
+Quizás el desafío no sea construir Brújula.
+Quizás sea construirla al mismo ritmo que quieres vivir.
+
+Con cariño,
+Sue
+
+Reglas de la Carta de Sue:
+
+- Máximo 3 párrafos breves.
+- No repetir porcentajes.
+- No describir la tabla.
+- No usar lenguaje técnico.
+- No juzgar.
+- No ordenar.
+- Debe terminar con esperanza.
+- Debe mencionar un cuidado concreto.
+- Debe conservar la idea de que la decisión sigue siendo de la persona.
+
+----------------------------------------------------------------------
+NIVEL 6 — PEQUEÑOS RITUALES SUGERIDOS
+----------------------------------------------------------------------
+
+No llamar “acciones” ni “tareas”.
+
+Usar:
+
+Pequeños rituales sugeridos
+
+Deben estar conectados con el escenario y con el principal cuidado detectado.
+
+Ejemplo:
+
+Esta semana podrías:
+
+☕ Preparar un chocolate caliente y sentarte diez minutos sin pantalla.
+
+🌳 Salir al parque una tarde, aunque sea por veinte minutos.
+
+📖 Escribir una página del Libro de Brújula.
+
+💤 Dormir media hora antes una noche de esta semana.
+
+📷 Tomar una fotografía de algo cotidiano que te parezca bonito.
+
+Reglas:
+
+- Máximo 5 rituales.
+- Deben ser pequeños.
+- Deben ser realistas.
+- No deben sonar como productividad.
+- Deben ayudar a corregir el rumbo sin culpa.
+- Deben conectar con salud, calma, creatividad, relaciones o propósito.
+
+======================================================================
+4. NUEVOS ÍNDICES DERIVADOS
+======================================================================
+
+El motor debe calcular índices derivados.
+No deben ser simples alias de variables existentes.
+
+----------------------------------------------------------------------
+ÍNDICE DE CALIDAD DE VIDA
+----------------------------------------------------------------------
+
+Pregunta que responde:
+
+¿Qué tan agradable y sostenible sería vivir este escenario?
+
+Componentes:
+
++ Salud
++ Relaciones
++ Propósito
++ Libertad
++ Tiempo disponible
++ Energía
+
+Penalizaciones:
+
+- Estrés
+- Dolor
+- Sobrecarga
+- Dependencia excesiva de un solo ingreso o rol
+
+No debe ser equivalente a ahorro.
+No debe depender principalmente del dinero.
+
+----------------------------------------------------------------------
+ÍNDICE DE LIBERTAD FINANCIERA
+----------------------------------------------------------------------
+
+Pregunta que responde:
+
+¿Cuánta libertad de decisión entrega este escenario?
+
+Componentes:
+
++ Ingresos
++ Ahorro
++ Patrimonio
++ Margen mensual
++ Diversificación de ingresos
++ Estabilidad laboral
+
+Penalizaciones:
+
+- Deudas
+- Gastos fijos altos
+- Dependencia de un solo ingreso
+- Falta de fondo de emergencia
+
+Importante:
+No es lo mismo que “tener dinero”.
+Es la capacidad de elegir sin vivir atrapada por obligaciones financieras.
+
+----------------------------------------------------------------------
+ÍNDICE DE LIBERTAD CREATIVA
+----------------------------------------------------------------------
+
+Pregunta que responde:
+
+¿Cuánto espacio real tiene la persona para crear?
+
+Componentes:
+
++ Tiempo libre
++ Energía
++ Salud
++ Estabilidad financiera mínima
++ Propósito
++ Bajo nivel de agotamiento
+
+Penalizaciones:
+
+- Exceso de trabajo
+- Dolor físico
+- Estrés
+- Dependencia de redes sociales o algoritmo
+- Obligaciones que consumen energía mental
+
+----------------------------------------------------------------------
+ÍNDICE DE SALUD INTEGRAL
+----------------------------------------------------------------------
+
+Pregunta que responde:
+
+¿Qué tan preparado está el cuerpo y la mente para sostener este camino?
+
+Componentes:
+
++ Capacidad física
++ Movimiento
++ Descanso
++ Alimentación
++ Manejo del estrés
++ Salud metabólica
++ Salud musculoesquelética
+
+Penalizaciones:
+
+- Dolor
+- Lesiones
+- Sedentarismo
+- Falta de sueño
+- Exceso de carga física o mental
+
+----------------------------------------------------------------------
+ÍNDICE DE ENERGÍA VITAL
+----------------------------------------------------------------------
+
+Pregunta que responde:
+
+¿Con cuánta energía cotidiana se vive este escenario?
+
+Componentes:
+
++ Sueño
++ Motivación
++ Salud
++ Alimentación
++ Movimiento suave
++ Propósito
+
+Penalizaciones:
+
+- Estrés
+- Trabajo excesivo
+- Conflictos
+- Uso nocturno de pantalla
+- Sobrecarga
+
+----------------------------------------------------------------------
+ÍNDICE DE SERENIDAD
+----------------------------------------------------------------------
+
+Nuevo índice recomendado.
+
+Pregunta que responde:
+
+¿Cuánta calma interior permite este escenario?
+
+Componentes:
+
++ Sueño
++ Tiempo en naturaleza
++ Relaciones seguras
++ Meditación o pausa
++ Rituales de calma
++ Tiempo sin pantalla
+
+Penalizaciones:
+
+- Estrés
+- Ansiedad
+- Uso excesivo de celular
+- Comparación social
+- Urgencia constante
+
+----------------------------------------------------------------------
+ÍNDICE DE RESILIENCIA
+----------------------------------------------------------------------
+
+Nuevo índice recomendado.
+
+Pregunta que responde:
+
+¿Qué tan preparada está la persona para atravesar dificultades?
+
+Componentes:
+
++ Red de apoyo
++ Ahorros
++ Salud
++ Flexibilidad laboral
++ Capacidad emocional
++ Experiencia previa superando dificultades
+
+Penalizaciones:
+
+- Aislamiento
+- Deuda alta
+- Salud frágil
+- Falta de descanso
+- Ingresos muy dependientes de una sola fuente
+
+----------------------------------------------------------------------
+ÍNDICE DE ESPERANZA
+----------------------------------------------------------------------
+
+Nuevo índice recomendado y muy importante.
+
+Pregunta que responde:
+
+¿Este camino hace sentir que vale la pena seguir avanzando?
+
+Componentes:
+
++ Progreso hacia sueños
++ Propósito
++ Pequeñas victorias
++ Apoyo social
++ Percepción de avance
++ Espacio para crear
++ Sentido de futuro
+
+Penalizaciones:
+
+- Estancamiento
+- Comparación social
+- Falta de descanso
+- Pérdida de sentido
+- Exceso de obligaciones sin avance visible
+
+======================================================================
+5. REDISEÑO DE IA
+======================================================================
+
+Actualmente Ollama interpreta una tabla.
+
+Eso produce respuestas genéricas.
+
+La IA debe recibir un objeto LifeSummary.
+
+La IA ya no debe interpretar una tabla.
+Debe interpretar una vida.
+
+----------------------------------------------------------------------
+OBJETO LifeSummary
+----------------------------------------------------------------------
+
+Ejemplo:
+
+{
+  "diagnosticoCamino": "Camino prometedor",
+  "calidadVida": 82,
+  "libertadFinanciera": 54,
+  "libertadCreativa": 91,
+  "saludIntegral": 43,
+  "energiaVital": 61,
+  "serenidad": 58,
+  "resiliencia": 66,
+  "esperanza": 87,
+  "riesgoAgotamiento": "Medio",
+  "probabilidadArrepentimiento": "Muy baja",
+  "coherenciaEstrellaNorte": "Excelente",
+  "fortalezas": [
+    "Alta coherencia con propósito",
+    "Gran libertad creativa",
+    "Relaciones fuertes"
+  ],
+  "cuidados": [
+    "Salud física",
+    "Riesgo de sobrecarga",
+    "Estabilidad financiera inicial"
+  ],
+  "eventosCamino": [
+    {
+      "year": 2028,
+      "icon": "🎓",
+      "title": "Terminas Ingeniería",
+      "description": "Recuperas tiempo y energía para explorar nuevos caminos."
+    }
+  ],
+  "valores": [
+    "Creatividad",
+    "Relaciones saludables",
+    "Autocuidado",
+    "Empatía"
+  ],
+  "suenos": [
+    "Vivir de proyectos creativos",
+    "Ayudar a otras personas",
+    "Construir una vida tranquila y con sentido"
+  ]
+}
+
+----------------------------------------------------------------------
+PROMPT PARA CARTA DE SUE
+----------------------------------------------------------------------
+
+La IA debe recibir instrucciones como:
+
+Escribe una carta breve de Sue.
+
+Sue es una compañera amable, no una autoridad.
+Debe hablar con ternura, calma y esperanza.
+No debe dar órdenes.
+No debe repetir porcentajes.
+No debe usar lenguaje técnico.
+Debe mencionar una fortaleza del camino y un cuidado importante.
+Debe terminar recordando que la persona conserva la decisión.
+
+Máximo 3 párrafos breves.
+
+======================================================================
+6. UI ESPERADA
+======================================================================
+
+La pantalla deja de ser:
+
+Resultado
+↓
+Tabla
+↓
+Texto
+
+Y pasa a ser:
+
+Portada
+↓
+Resumen inmediato
+↓
+Índices de Vida
+↓
+Lo que este camino gana / Lo que este camino sacrifica
+↓
+Historia del Camino
+↓
+Evolución de tu Jardín
+↓
+Carta de Sue
+↓
+Pequeños rituales sugeridos
+↓
+Tabla avanzada colapsable
+↓
+Escenarios relacionados
+
+======================================================================
+7. CRITERIOS DE ACEPTACIÓN
+======================================================================
+
+La versión estará lista cuando:
+
+1. Un usuario comprenda el resultado general en menos de 30 segundos.
+
+2. El usuario pueda explicar con sus palabras:
+   - qué gana este camino;
+   - qué sacrifica;
+   - qué debe cuidar.
+
+3. La tabla anual ya no sea necesaria para entender la simulación.
+
+4. Los índices se entiendan sin documentación externa.
+
+5. El riesgo de agotamiento no aparezca solo como porcentaje, sino como alerta textual.
+
+6. La interpretación no parezca un reporte financiero ni una respuesta genérica de IA.
+
+7. La Carta de Sue transmita calma, esperanza y acompañamiento.
+
+8. Los pequeños rituales sean concretos, suaves y fáciles de ejecutar.
+
+9. Incluso un escenario desfavorable termine con una sensación de posibilidad, no de fracaso.
+
+10. La interfaz se sienta más cercana a Brújula y menos cercana a una herramienta de analítica.
+
+======================================================================
+8. RESULTADO ESPERADO
+======================================================================
+
+Después de esta iteración el usuario no debería decir:
+
+“Tengo 52% de Brújula.”
+
+Debería poder decir:
+
+“Este camino me acerca a mi propósito, pero todavía necesito fortalecer mi estabilidad financiera y cuidar mi salud para que sea sostenible.”
+
+Esa es la diferencia entre mostrar datos y entregar una guía de vida.
+
+======================================================================
+9. NOTA DE IMPLEMENTACIÓN
+======================================================================
+
+Esta versión debe implementarse como incremento pequeño.
+
+No requiere rediseñar todo el sistema.
+
+Orden recomendado:
+
+1. Crear LifeSummary.
+2. Calcular índices derivados.
+3. Reordenar UI en los seis niveles.
+4. Mejorar timeline.
+5. Cambiar interpretación IA a Carta de Sue.
+6. Agregar rituales sugeridos.
+7. Dejar tabla como sección avanzada.
+
+No avanzar todavía a Jardín visual completo.
+Eso será una versión posterior.
+

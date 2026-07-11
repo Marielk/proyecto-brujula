@@ -1,0 +1,41 @@
+# Codex/workspace metadata
+.agents/
+.codex/
+
+# Local helper/reference repositories
+MiroFish/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Node/Next.js
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime output
+logs/
+*.log
+
+# Environment and local settings
+.env
+.env.*
+!.env.example
+
+# Packaged snapshots and installers
+*.zip
+*.exe
+*.winmd
