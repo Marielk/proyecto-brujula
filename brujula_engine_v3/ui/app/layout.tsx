@@ -22,6 +22,12 @@ const jakarta = Plus_Jakarta_Sans({
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"
+        />
+      </head>
       <body className={`${newsreader.variable} ${jakarta.variable}`}>{children}</body>
     </html>
   );

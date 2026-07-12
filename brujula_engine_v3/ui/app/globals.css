@@ -1,4 +1,7 @@
 :root {
+  /* font variables referenced throughout the stylesheet */
+  --font-newsreader: 'Newsreader', Georgia, serif;
+  --font-jakarta: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   color-scheme: light;
   --bg: #f6f7f9;
   --surface: #ffffff;
@@ -36,25 +39,133 @@
   --book-muted: #434841;
 }
 
+/* Design tokens / aliases for viaje view (based on attached design) */
+:root {
+  --primary: #4b6547; /* same as --book-sage */
+  --primary-fixed: #cdebc5;
+  --primary-container: #a7c4a0;
+  --surface: #fbf9f4;
+  --parchment-cream: #fdfbf7;
+  --soft-sage: #8fa989;
+  --pale-lavender: #e6e0ed;
+  --on-surface: #1b1c19;
+}
+
+/* Selection styling to match design */
+::selection {
+  background: var(--primary-fixed);
+  color: var(--on-surface);
+}
+
+/* Journey view background and helpers */
+.journeyScreen,
+.journeyView,
+main.journeyView {
+  background: radial-gradient(circle at top right, #f4fafc 0%, #bbe8ee 30%, #fbf9f4 70%);
+  min-height: 100vh;
+}
+
+/* Glass card (used for main panels) */
+.glass-card {
+  background: rgba(255, 255, 255, 0.40);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1rem;
+}
+
+/* Letter / paper style for long copy */
+.letter-paper {
+  background-color: var(--parchment-cream);
+  background-image:
+    linear-gradient(90deg, transparent 40px, #abced4 40px, #abced4 42px, transparent 42px),
+    linear-gradient(#eee 1.1em, transparent 1.1em);
+  background-size: 100% 1.2em;
+  box-shadow: 2px 2px 10px rgba(0,0,0,0.05), inset 0 0 40px rgba(0,0,0,0.02);
+  position: relative;
+}
+
+/* Signature style */
+.signature {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--primary);
+  margin-top: 1.25rem;
+  opacity: 0.85;
+}
+
+/* Floating animation used in designs */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Utility for illustrated timeline vertical line */
+.timeline-line {
+  position: absolute;
+  left: 2rem;
+  top: 1rem;
+  bottom: 1rem;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--primary)/20, var(--primary)/40, var(--primary)/20);
+}
+
+/* Ensure newsreader font available to elements using it */
+.font-newsreader {
+  font-family: var(--font-newsreader);
+}
+
+/* Small helpers for travel view buttons appearance */
+.travel-cta {
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(75, 101, 71, 0.12);
+  background: transparent;
+  color: var(--primary);
+}
+.travel-cta:hover { background: var(--primary); color: white; }
+
 body {
   font-family: var(--font-sans);
+}
+
+/* Material Symbols helper (matches usage in the attached design) */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: inherit;
+  line-height: 1;
+  display: inline-block;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga' 1;
+  -webkit-font-feature-settings: 'liga' 1;
+  -webkit-font-smoothing: antialiased;
 }
 
 .appCanvas {
   min-height: 100vh;
   color: var(--book-ink);
   background:
-    radial-gradient(circle at 85% 18%, rgba(230, 224, 237, 0.45), transparent 32%),
-    radial-gradient(circle at 12% 38%, rgba(205, 235, 197, 0.44), transparent 34%),
-    repeating-radial-gradient(circle at 40% 20%, rgba(27, 28, 25, 0.035) 0 1px, transparent 1px 12px),
+    radial-gradient(circle at 85% 18%, rgba(230, 224, 237, 0.80), transparent 32%),
+    radial-gradient(circle at 12% 38%, rgba(205, 235, 197, 0.70), transparent 34%),
+    /* temporally hide ring pattern to check color gradients */
+    repeating-radial-gradient(circle at 40% 20%, rgba(27, 28, 25, 0.00) 0 1px, transparent 1px 12px),
     var(--book-bg);
+  background-repeat: no-repeat;
   padding: 0 32px 56px;
 }
 
 .profileCanvas {
   background:
-    radial-gradient(circle at top right, rgba(255, 215, 240, 0.5), transparent 42%),
-    radial-gradient(circle at bottom left, rgba(218, 231, 205, 0.58), transparent 40%),
+    radial-gradient(circle at top right, rgba(255, 215, 240, 0.80), transparent 42%),
+    radial-gradient(circle at bottom left, rgba(218, 231, 205, 0.80), transparent 40%),
     #f6fafd;
 }
 
@@ -577,8 +688,8 @@ progress::-webkit-progress-value {
 .journeyLoading {
   align-items: center;
   background:
-    radial-gradient(circle at 18% 20%, rgba(205, 235, 197, 0.26), transparent 30%),
-    radial-gradient(circle at 85% 78%, rgba(230, 224, 237, 0.30), transparent 34%),
+    radial-gradient(circle at 18% 20%, rgba(205, 235, 197, 0.60), transparent 30%),
+    radial-gradient(circle at 85% 78%, rgba(230, 224, 237, 0.60), transparent 34%),
     rgba(253, 251, 247, 0.72);
   border-radius: 48px;
   color: var(--book-muted);
@@ -593,7 +704,7 @@ progress::-webkit-progress-value {
 .loadingOrb {
   animation: slowFloat 6s ease-in-out infinite;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(205, 235, 197, 0.28)),
+    radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(205, 235, 197, 0.60)),
     var(--book-paper);
   border: 1px solid rgba(75, 101, 71, 0.08);
   border-radius: 999px;
@@ -1326,10 +1437,12 @@ progress::-webkit-progress-value {
 /* Brújula v0.12 - ajuste visual libro ilustrado */
 .appCanvas {
   background:
-    radial-gradient(circle at 8% 20%, rgba(205, 235, 197, 0.18), transparent 24%),
-    radial-gradient(circle at 88% 76%, rgba(230, 224, 237, 0.18), transparent 28%),
-    repeating-radial-gradient(circle at 42% 18%, rgba(27, 28, 25, 0.055) 0 1px, transparent 1px 14px),
+    radial-gradient(circle at 8% 20%, rgba(205, 235, 197, 0.50), transparent 24%),
+    radial-gradient(circle at 88% 76%, rgba(230, 224, 237, 0.50), transparent 28%),
+    /* temporally hide ring pattern to check color gradients */
+    repeating-radial-gradient(circle at 42% 18%, rgba(27, 28, 25, 0.00) 0 1px, transparent 1px 14px),
     linear-gradient(180deg, #fdfbf7 0%, #fbf9f4 58%, #f6fbf7 100%);
+  background-repeat: no-repeat;
 }
 
 .modeLanding {
@@ -1446,7 +1559,8 @@ progress::-webkit-progress-value {
   background:
     radial-gradient(circle at 10% 18%, rgba(205, 235, 197, 0.2), transparent 28%),
     radial-gradient(circle at 82% 78%, rgba(230, 224, 237, 0.2), transparent 30%),
-    repeating-radial-gradient(circle at 42% 24%, rgba(27, 28, 25, 0.035) 0 1px, transparent 1px 13px),
+    /* temporally hide ring pattern to check color gradients */
+    repeating-radial-gradient(circle at 42% 24%, rgba(27, 28, 25, 0.00) 0 1px, transparent 1px 13px),
     rgba(253, 251, 247, 0.88);
   border: 0;
   border-radius: 0;
@@ -1824,6 +1938,7 @@ button {
 
 button:hover {
   background: var(--accent-strong);
+  color: white;
 }
 
 button:disabled {
@@ -1838,6 +1953,7 @@ button:disabled {
 
 .secondaryButton:hover {
   background: #dfeae6;
+  color: var(--book-ink);
 }
 
 .dangerButton {
@@ -1847,6 +1963,28 @@ button:disabled {
 
 .dangerButton:hover {
   background: #ffe0e0;
+  color: var(--book-ink);
+}
+
+/* Mode / card buttons: set contrasting text on hover */
+.modeCard button:hover,
+.journeyInput button:hover,
+.ritualActions button:hover {
+  background: var(--book-sage);
+  color: white;
+  border-color: transparent;
+}
+
+.gardenCard button:hover {
+  background: var(--v08-soft-teal);
+  color: white;
+  border-color: transparent;
+}
+
+.journeyCard button:hover {
+  background: var(--v08-lavender);
+  color: white;
+  border-color: transparent;
 }
 
 .profileShell {
