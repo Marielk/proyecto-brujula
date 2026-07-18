@@ -538,6 +538,8 @@ function JourneyResults({ result }: { result: SimulationResult }) {
   const confidenceScore = Math.round(guidance.confidenceScore || 0);
   const preparation = Math.round(guidance.preparation);
   const effort = effortFromResult(result);
+  const scenarioType = guidance.goal?.controllabilityLabel || result.debug?.scenarioType;
+  const debug = guidance.debug || result.debug;
   return (
     <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
       <article className="hybridIntro glassPanel">
@@ -545,6 +547,9 @@ function JourneyResults({ result }: { result: SimulationResult }) {
         <h2>Exploré {exploredPaths} futuros plausibles antes de sugerirte un sendero.</h2>
         <p>Brújula expandió estrategias base, podó rutas frágiles, agrupó caminos parecidos y eligió la alternativa que mejor protege tu vida cotidiana.</p>
         <div className="hybridStatus">
+          {guidance.goal && <span className="okPill">Dominio: {domainLabel(guidance.goal.domain)}</span>}
+          {scenarioType && <span className={guidance.goal?.controllability === "low" ? "fallbackPill" : "okPill"}>Escenario: {scenarioType}</span>}
+          {selectedPath?.domainPolicy && <span className="okPill">Modelo especializado: {selectedPath.domainPolicy}</span>}
           <span className={result.llm.goal ? "okPill" : "fallbackPill"}>Intérprete: {result.llm.goal ? "Ollama" : "Local"}</span>
           <span className={result.llm.paths ? "okPill" : "fallbackPill"}>Caminos: {result.llm.paths ? "Ollama" : "Locales"}</span>
           <span className={result.llm.comparison ? "okPill" : "fallbackPill"}>Comparación: {result.llm.comparison ? "Ollama" : "Local"}</span>
@@ -567,6 +572,8 @@ function JourneyResults({ result }: { result: SimulationResult }) {
             <div><span>Tiempo estimado</span><strong>{selectedPath.timeEstimate}</strong></div>
             <div><span>Riesgo financiero</span><strong>{riskLabel(selectedPath.financialRisk)}</strong></div>
             <div><span>Demanda de energía</span><strong>{energyLabel(selectedPath.energyDemand)}</strong></div>
+            {selectedPath.domainBenefit?.name && <div><span>Beneficio del dominio</span><strong>{selectedPath.domainBenefit.name}</strong></div>}
+            {selectedPath.reversibility && <div><span>Reversibilidad</span><strong>{selectedPath.reversibility}</strong></div>}
           </div>
           {selectedPath.evaluationDetails && (
             <div className="evaluationPetals">
@@ -666,6 +673,15 @@ function JourneyResults({ result }: { result: SimulationResult }) {
         </div>
       </article>
 
+      {guidance.whatCouldChangeRecommendation && guidance.whatCouldChangeRecommendation.length > 0 && (
+        <section className="changeRecommendationCard glassPanel">
+          <h3>¿Qué podría cambiar esta recomendación?</h3>
+          <ul>
+            {guidance.whatCouldChangeRecommendation.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+      )}
+
       <article className="preparationExplain glassPanel">
         <span>Cómo leer este número</span>
         <p>{guidance.preparationExplanation}</p>
@@ -736,9 +752,9 @@ function JourneyResults({ result }: { result: SimulationResult }) {
         <h3>Historia del camino</h3>
         <ol>
           {result.lifeReport.timeline.slice(0, 4).map((item, index) => (
-            <li key={`${item.year}-${item.title}`}>
+            <li key={`${String(item.year)}-${item.title}`}>
               <span>{index + 1}</span>
-              <div><strong>{item.title}</strong><p>{item.description}</p></div>
+              <div><small>{item.year}</small><strong>{item.title}</strong><p>{item.description}</p></div>
             </li>
           ))}
         </ol>
@@ -752,6 +768,19 @@ function JourneyResults({ result }: { result: SimulationResult }) {
 
       <details className="advancedJourney glassPanel">
         <summary>Datos técnicos avanzados</summary>
+        {debug && (
+          <div className="debugGrid">
+            <div><span>Dominio</span><strong>{debug.domainLabel || debug.domain}</strong></div>
+            <div><span>Controlabilidad</span><strong>{debug.scenarioType || debug.controllability}</strong></div>
+            <div><span>Contexto primario</span><strong>{(debug.primaryContext || []).join(", ") || "sin datos"}</strong></div>
+            <div><span>Rutas base</span><strong>{debug.basePaths ?? 0}</strong></div>
+            <div><span>Variantes</span><strong>{debug.variants ?? 0}</strong></div>
+            <div><span>Rutas podadas</span><strong>{debug.prunedPaths ?? 0}</strong></div>
+            <div><span>Clusters</span><strong>{debug.clusters ?? 0}</strong></div>
+            <div><span>GenericityGuard</span><strong>{debug.genericityGuard?.passed ? "OK" : "Revisar"}</strong></div>
+            <div><span>Fallback</span><strong>{(debug.fallbackUsed || []).join(", ") || "no"}</strong></div>
+          </div>
+        )}
         <div className="tableWrap">
           <table>
             <thead>
@@ -897,6 +926,7 @@ function evaluationLabels(path: CandidatePath): Record<string, string> {
   const details = path.evaluationDetails || {};
   return Object.fromEntries(
     [
+      ["domainSpecific", "Destino"],
       ["sustainability", "Sostenibilidad"],
       ["qualityOfLife", "Calidad de vida"],
       ["serenity", "Serenidad"],

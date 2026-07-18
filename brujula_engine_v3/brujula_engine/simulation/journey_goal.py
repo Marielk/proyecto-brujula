@@ -5,6 +5,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from brujula_engine.rules.scoring import clamp
+from brujula_engine.simulation.journey_personalization import (
+    avoid_from_path,
+    build_goal_profile_v2,
+    causal_risks,
+    causal_strengths,
+    conditions_from_path,
+    domain_specific_metrics,
+    first_step_from_path,
+    low_control_message,
+)
 
 
 @dataclass(frozen=True)
@@ -33,17 +43,24 @@ def interpret_goal(text: str, life_profile: dict | None = None) -> dict:
     lower = _normalize(text)
     domain = _resolve_domain(lower)
     spec = _goal_spec(domain, lower)
+    spec_dict = build_goal_profile_v2(spec.to_dict(), text, life_profile)
     return {
-        "spec": spec.to_dict(),
+        "spec": spec_dict,
         "ruleSet": _domain_rule_set(spec.domain),
-        "unsupportedWarning": None
-        if spec.supported
-        else "Este tipo de viaje todavía utiliza un modelo general. La simulación puede ser menos precisa.",
+        "unsupportedWarning": low_control_message({"spec": spec_dict})
+        or (
+            None
+            if spec.supported
+            else "Este tipo de viaje todavía utiliza un modelo general. La simulación puede ser menos precisa."
+        ),
     }
 
 
 def domain_metrics(goal: dict, scores: dict, summary: dict, context: dict) -> dict:
     domain = goal["spec"]["domain"]
+    specific = domain_specific_metrics(domain, scores, context)
+    if specific:
+        return specific
     if domain == "salud":
         return {
             "Preparación física": _avg(scores["saludIntegral"], scores["energiaVital"], scores["serenidad"]),
@@ -98,6 +115,9 @@ def domain_metrics(goal: dict, scores: dict, summary: dict, context: dict) -> di
 
 def domain_strengths(goal: dict, metrics: dict, scores: dict, context: dict) -> list[dict]:
     domain = goal["spec"]["domain"]
+    selected_path = goal.get("selectedPath")
+    if selected_path:
+        return causal_strengths(goal, selected_path, metrics, context)
     ordered = _ordered_metric_items(metrics, reverse=True)
     if domain == "salud":
         return _items(
@@ -153,11 +173,24 @@ def domain_strengths(goal: dict, metrics: dict, scores: dict, context: dict) -> 
                 "Espacio de obra": "Hay margen para cuidar el proceso, no solo el resultado.",
             },
         )
+    if domain == "carrera":
+        return _items(
+            ordered,
+            {
+                "Preparación profesional": "La experiencia previa puede convertirse en evidencia para el rol objetivo.",
+                "Fuerza del portafolio": "El portafolio permite mostrar criterio antes de pedir una oportunidad.",
+                "Empleabilidad": "La red y el mercado ayudan a que el regreso laboral no dependa solo de postular.",
+                "Compatibilidad de renta": "Cuidar la renta evita que el cambio laboral erosione la vida cotidiana.",
+            },
+        )
     return _items(ordered, {})
 
 
 def domain_risks(goal: dict, metrics: dict, scores: dict, context: dict) -> list[dict]:
     domain = goal["spec"]["domain"]
+    selected_path = goal.get("selectedPath")
+    if selected_path:
+        return causal_risks(goal, selected_path, metrics, context)
     ordered = _ordered_metric_items(metrics, reverse=False)
     if domain == "salud":
         return _items(
@@ -219,11 +252,25 @@ def domain_risks(goal: dict, metrics: dict, scores: dict, context: dict) -> list
             },
             risk=True,
         )
+    if domain == "carrera":
+        return _items(
+            ordered,
+            {
+                "Preparación profesional": "Si la brecha no se nombra, la búsqueda puede volverse frustrante.",
+                "Fuerza del portafolio": "Postular sin evidencia visible reduce claridad y confianza.",
+                "Empleabilidad": "El mercado necesita conversaciones reales, no solo preparación privada.",
+                "Sostenibilidad de transición": "Preparar portafolio y postular sin descanso puede desgastar la ruta.",
+            },
+            risk=True,
+        )
     return _items(ordered, {}, risk=True)
 
 
 def domain_success_conditions(goal: dict, metrics: dict, scores: dict, context: dict) -> list[str]:
     domain = goal["spec"]["domain"]
+    selected_path = goal.get("selectedPath")
+    if selected_path:
+        return conditions_from_path(selected_path, goal, metrics, context)
     if domain == "salud":
         return [
             "Definir una rutina mínima que puedas repetir incluso en semanas difíciles.",
@@ -266,6 +313,13 @@ def domain_success_conditions(goal: dict, metrics: dict, scores: dict, context: 
             "Separar práctica creativa de validación externa al inicio.",
             "Cuidar descanso y dinero para que la obra no nazca desde urgencia.",
         ]
+    if domain == "carrera":
+        return [
+            "Completar un diagnóstico de brechas para el rol objetivo.",
+            "Actualizar evidencia profesional antes de postular masivamente.",
+            "Conversar con personas del mercado para calibrar renta y expectativas.",
+            "Postular selectivamente cuando el portafolio ya sostenga la historia.",
+        ]
     return [
         "Convertir el sueño en un experimento pequeño y medible.",
         "Revisar dinero, energía y apoyo antes de tomar decisiones irreversibles.",
@@ -275,6 +329,9 @@ def domain_success_conditions(goal: dict, metrics: dict, scores: dict, context: 
 
 def domain_avoid_list(goal: dict, metrics: dict, scores: dict, context: dict) -> list[str]:
     domain = goal["spec"]["domain"]
+    selected_path = goal.get("selectedPath")
+    if selected_path:
+        return avoid_from_path(selected_path, goal, metrics, context)
     if domain == "salud":
         return [
             "Empezar con una rutina extrema que no respete dolor o cansancio.",
@@ -311,6 +368,12 @@ def domain_avoid_list(goal: dict, metrics: dict, scores: dict, context: dict) ->
             "Comparar tu ritmo creativo con el de otras personas.",
             "Convertir la obra en una prueba de valor personal.",
         ]
+    if domain == "carrera":
+        return [
+            "Postular masivamente antes de actualizar evidencia profesional.",
+            "Aceptar un rol que empeore de forma importante renta, salud o estilo de vida.",
+            "Estudiar herramientas sin relación con la brecha real del rol objetivo.",
+        ]
     return [
         "Tomar una decisión irreversible sin revisar datos reales.",
         "Convertir el sueño en una urgencia que borre tu bienestar.",
@@ -319,6 +382,9 @@ def domain_avoid_list(goal: dict, metrics: dict, scores: dict, context: dict) ->
 
 def domain_first_step(goal: dict, metrics: dict, scores: dict, context: dict) -> dict:
     domain = goal["spec"]["domain"]
+    selected_path = goal.get("selectedPath")
+    if selected_path:
+        return first_step_from_path(selected_path, goal)
     if domain == "salud":
         return {
             "title": "Elegir una rutina mínima de 10 minutos por 14 días.",
@@ -348,6 +414,11 @@ def domain_first_step(goal: dict, metrics: dict, scores: dict, context: dict) ->
         return {
             "title": "Crear una pieza pequeña sin publicarla todavía.",
             "why": "La obra necesita un primer refugio antes de pedirle resultados.",
+        }
+    if domain == "carrera":
+        return {
+            "title": "Seleccionar dos proyectos para reconstruir el portafolio profesional.",
+            "why": "Esto permite identificar brechas reales, ordenar tu narrativa laboral y validar el regreso antes de postular.",
         }
     return {
         "title": "Escribir una hipótesis pequeña del sueño y probarla durante 30 días.",
@@ -394,6 +465,13 @@ def domain_milestones(goal: dict, context: dict) -> list[dict]:
             _milestone(2028, "Primera muestra segura", "Compartir una pieza con una comunidad pequeña y amable."),
             _milestone(2030, "Voz propia", "Consolidar una forma creativa que cuide identidad, descanso y sentido."),
         ]
+    if domain == "carrera":
+        return [
+            _milestone("Semana 1-2", "Auditar experiencia y brechas", "Elegir proyectos, rol objetivo y competencias faltantes."),
+            _milestone("Mes 1-2", "Reconstruir portafolio", "Preparar casos de estudio y pedir revisión profesional."),
+            _milestone("Mes 3-6", "Activar mercado", "Conversar con red, postular selectivamente y calibrar renta."),
+            _milestone("Mes 7-12", "Decisión de transición", "Aceptar, pausar o rediseñar según oferta, salud y estilo de vida."),
+        ]
     return []
 
 
@@ -411,10 +489,16 @@ def domain_rituals(goal: dict, context: dict) -> list[str]:
         return ["📚 Preparar un bloque de estudio breve con cierre amable.", "✍️ Escribir qué aprendiste sin juzgarte."]
     if domain == "creatividad":
         return ["🎨 Abrir veinte minutos de obra sin meta pública.", "✨ Guardar una idea pequeña antes de dormir."]
+    if domain == "carrera":
+        return ["🧭 Revisar un proyecto antiguo y anotar qué evidencia profesional muestra.", "✉️ Escribir a una persona de tu red para pedir una conversación breve."]
     return ["☕ Tomar diez minutos para escribir el siguiente experimento pequeño."]
 
 
 def _resolve_domain(lower: str) -> str:
+    if any(word in lower for word in ["ux", "product designer", "diseño ux", "diseno ux", "empleo", "ascenso", "ascender", "mejorar renta", "volver al diseño", "volver al diseno", "cambiar de profesión", "cambiar de profesion"]):
+        return "carrera"
+    if any(word in lower for word in ["loter", "ganar el loto", "ganarme el loto", "sorteo"]):
+        return "general"
     if any(word in lower for word in ["salud", "peso", "adelgazar", "bajar de peso", "maratón", "maraton", "correr", "recuperarme", "lesión", "lesion", "dolor"]):
         return "salud"
     if any(word in lower for word in ["casa", "departamento", "vivienda", "hipoteca", "hipotecario", "comprar un hogar", "comprar una propiedad"]):
@@ -425,7 +509,7 @@ def _resolve_domain(lower: str) -> str:
         return "educacion"
     if any(word in lower for word in ["escribir", "novela", "pintar", "música", "musica", "obra", "crear una obra", "ilustrar", "poesía", "poesia"]):
         return "creatividad"
-    if any(word in lower for word in ["emprender", "startup", "negocio", "cafetería", "cafeteria", "pasteler", "arte", "vivir del arte", "carrera", "freelance", "brújula", "brujula"]):
+    if any(word in lower for word in ["emprender", "startup", "negocio", "cafetería", "cafeteria", "pasteler", "arte", "vivir del arte", "freelance", "brújula", "brujula"]):
         return "emprendimiento"
     return "general"
 
@@ -439,6 +523,7 @@ def _goal_spec(domain: str, lower: str) -> GoalSpec:
         "emprendimiento": GoalSpec("emprendimiento", _business_type(lower), horizon, ["validación", "ingresos", "ahorro", "energía", "tiempo"], ["oferta validada", "audiencia", "fondo de transición"], ["agotamiento", "deuda", "incertidumbre de ingresos"]),
         "educacion": GoalSpec("educacion", _education_type(lower), horizon, ["horas de estudio", "energía", "apoyo", "aplicación"], ["tiempo protegido", "programa adecuado", "mentoría"], ["sobrecarga", "costo", "cansancio"]),
         "creatividad": GoalSpec("creatividad", _creative_type(lower), horizon, ["obra", "práctica", "voz propia", "exposición"], ["tiempo creativo", "red segura", "ritmo de obra"], ["comparación", "exposición temprana", "agotamiento"]),
+        "carrera": GoalSpec("carrera", _career_type(lower), horizon, ["preparación profesional", "portafolio", "empleabilidad", "renta"], ["portafolio", "red profesional", "experiencia demostrable"], ["brecha de habilidades", "mercado", "carga laboral"]),
     }
     return specs.get(domain, GoalSpec("general", "objetivo general", horizon, ["bienestar", "finanzas", "energía", "propósito"], ["experimento pequeño", "tiempo de revisión"], ["incertidumbre"], supported=False))
 
@@ -451,6 +536,7 @@ def _domain_rule_set(domain: str) -> dict:
         "emprendimiento": "Emprendimiento / cambio de carrera",
         "educacion": "Educación",
         "creatividad": "Creatividad",
+        "carrera": "Carrera",
         "general": "Modelo general",
     }
     return {"domain": domain, "label": labels.get(domain, "Modelo general")}
@@ -512,6 +598,18 @@ def _creative_type(lower: str) -> str:
     if "pint" in lower or "ilustr" in lower:
         return "desarrollar una obra visual"
     return "desarrollar una vida creativa"
+
+
+def _career_type(lower: str) -> str:
+    if "ux" in lower or "diseño" in lower or "diseno" in lower or "product designer" in lower:
+        return "volver a UX"
+    if "ascenso" in lower or "ascender" in lower:
+        return "conseguir ascenso"
+    if "freelance" in lower or "independiente" in lower:
+        return "trabajar freelance"
+    if "renta" in lower:
+        return "mejorar renta"
+    return "cambio laboral"
 
 
 def _avg(*values: float) -> float:

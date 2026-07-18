@@ -21,6 +21,7 @@ from brujula_engine.simulation.journey_hybrid import (
     qualitative_comparison_with_ai,
     scenario_from_candidate_path,
 )
+from brujula_engine.simulation.journey_personalization import debug_payload, genericity_guard, select_goal_context
 from brujula_engine.simulation.life_profile import base_state_from_profile, profile_warnings
 from brujula_engine.simulation.ollama_report import generate_sue_letter
 
@@ -73,6 +74,7 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         warnings.append(goal_error)
     if goal.get("unsupportedWarning"):
         warnings.append(goal["unsupportedWarning"])
+    context_selection = select_goal_context(life_profile, goal["spec"]["domain"])
 
     base_paths, used_ollama_for_paths, path_error = generate_candidate_paths_with_ai(client, text, goal, life_profile)
     if path_error:
@@ -100,17 +102,12 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     states = selected_eval["states"]
     summary = selected_eval["summary"]
     top_public = [_public_candidate(selected_eval), *[_public_candidate(item) for item in comparison["discarded"]]]
-    if path_error:
-        qualitative = local_qualitative_comparison(top_public)
-        used_ollama_for_comparison = False
-        qualitative_error = None
-    else:
-        qualitative, used_ollama_for_comparison, qualitative_error = qualitative_comparison_with_ai(
-            client,
-            top_public,
-            goal,
-            selected_eval["lifeReport"]["lifeSummary"],
-        )
+    qualitative, used_ollama_for_comparison, qualitative_error = qualitative_comparison_with_ai(
+        client,
+        top_public,
+        goal,
+        selected_eval["lifeReport"]["lifeSummary"],
+    )
     if qualitative_error:
         warnings.append("Ollama no pudo completar la segunda lectura comparativa. Brújula usó comparación local.")
         warnings.append(qualitative_error)
@@ -145,14 +142,38 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     life_report["lifeSummary"]["candidatePaths"] = visible_candidates
 
     try:
-        if path_error or qualitative_error:
-            raise RuntimeError("Se priorizo respuesta local rapida porque la IA ya venia lenta en esta simulacion.")
         report = generate_sue_letter(client, life_report["lifeSummary"])
     except Exception as exc:
         used_ollama_for_report = False
         warnings.append("Ollama no pudo generar la Carta de Sue. Se usó una carta determinista.")
         warnings.append(str(exc))
         report = deterministic_report(life_report)
+    guard = genericity_guard(life_report, report)
+    life_report["journeyGuidance"]["genericityGuard"] = guard
+    life_report["lifeSummary"]["genericityGuard"] = guard
+    llm_payload = {
+        "scenario": used_ollama_for_paths,
+        "goal": used_ollama_for_goal,
+        "paths": used_ollama_for_paths,
+        "comparison": used_ollama_for_comparison,
+        "report": used_ollama_for_report,
+        "model": model,
+    }
+    debug = debug_payload(
+        goal,
+        context_selection,
+        {
+            "basePaths": len(base_paths),
+            "variants": len(expanded_paths),
+            "prunedPaths": len(pruned_paths),
+            "clusters": len(clusters),
+            "scoringPolicy": selected_eval.get("domainPolicy"),
+        },
+        llm_payload,
+        guard,
+    )
+    life_report["journeyGuidance"]["debug"] = debug
+    life_report["lifeSummary"]["debug"] = debug
 
     return {
         "scenario": {
@@ -178,14 +199,8 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         "clusteredPaths": clusters,
         "lifeProfile": life_profile or {},
         "warnings": warnings,
-        "llm": {
-            "scenario": used_ollama_for_paths,
-            "goal": used_ollama_for_goal,
-            "paths": used_ollama_for_paths,
-            "comparison": used_ollama_for_comparison,
-            "report": used_ollama_for_report,
-            "model": model,
-        },
+        "debug": debug,
+        "llm": llm_payload,
     }
 
 
@@ -211,6 +226,12 @@ def local_qualitative_comparison(top_paths: list[dict]) -> dict:
     alternatives = top_paths[1:]
     return {
         "recommendedReason": f"La ruta '{selected['name']}' protege mejor el equilibrio entre avance, energia, dinero y sentido.",
+        "whyNotOthers": [
+            {"pathId": path["id"], "reason": f"{path['name']} necesita mejores supuestos antes de desplazar la recomendacion."}
+            for path in alternatives
+        ],
+        "decisionTradeoff": "La comparacion local privilegia evidencia temprana y reversibilidad antes que velocidad.",
+        "whatCouldChangeRecommendation": [],
         "discardedReasons": [
             f"{path['name']} queda como alternativa si baja su riesgo o aumenta la preparacion disponible."
             for path in alternatives
@@ -222,25 +243,37 @@ def local_qualitative_comparison(top_paths: list[dict]) -> dict:
 
 def deterministic_report(life_report: dict) -> str:
     summary = life_report["summary"]
-    rituals = life_report["rituals"]
     guidance = life_report.get("journeyGuidance", {})
     goal = guidance.get("goal", {})
+    selected = guidance.get("selectedPath") or {}
+    discarded = guidance.get("discardedPaths") or []
     profile = life_report.get("lifeSummary", {}).get("perfil", {})
     name = profile.get("nombre") or "Mariel"
-    dream = profile.get("suenoPrincipal") or goal.get("goalType") or "construir una vida más propia"
+    dream = goal.get("goalStatement") or profile.get("suenoPrincipal") or goal.get("goalType") or "construir una vida más propia"
     highlight = ""
     if profile.get("destacados"):
         highlight = f" También tengo presente esto de tu perfil: {profile['destacados'][0].lower()}"
-    ritual = rituals[0] if rituals else "hacer una pausa breve para escuchar cómo se siente este camino"
+    first_step = guidance.get("firstStep", {}).get("title", "elegir una primera acción verificable")
+    tradeoff = (selected.get("tradeoffs") or guidance.get("comparisonReasons") or ["avanzar con evidencia antes de acelerar"])[0]
+    decision = (selected.get("decisions") or [selected.get("name", "la ruta recomendada")])[0]
+    alternative = discarded[0]["name"] if discarded else "otra ruta"
+    if goal.get("controllability") == "low":
+        return (
+            f"Querida {name}:\n\n"
+            f"Al mirar {dream.lower()}, quiero ser honesta: este resultado depende en gran medida del azar. "
+            "No veo una ruta fiable para provocarlo, pero sí podemos explorar qué decisiones cuidarías si ocurriera "
+            "y cómo reformular una parte del deseo como objetivo financiero controlable.\n\n"
+            f"El primer gesto no es perseguir el sorteo: es {first_step.lower()}. "
+            "Eso protege tu calma y deja la decisión en tus manos.\n\nCon cariño,\nSue"
+        )
     return (
         f"Querida {name}:\n\n"
-        f"Al mirar este viaje de {goal.get('goalType', dream).lower()}, veo una pregunta concreta: "
-        f"{guidance.get('focusQuestion', 'qué tendría que cambiar para que este sueño sea posible').lower()} "
-        f"También aparece un cuidado importante: {summary['mainCare'].lower()}. No significa detenerte; "
-        f"significa preparar el terreno correcto para este tipo de sueño.{highlight}\n\n"
-        f"Tu sueño de {dream.lower()} no necesita resolverse de golpe. "
-        f"Quizás esta semana baste con algo pequeño, como {ritual.lower()} "
-        "La decisión sigue siendo tuya, y todavía hay maneras suaves de ajustar el rumbo.\n\n"
+        f"Al mirar {dream.lower()}, la ruta que más cuida tu vida hoy es {selected.get('name', 'la ruta gradual').lower()}. "
+        f"No porque sea la única, sino porque propone una decisión concreta: {str(decision).lower()}. "
+        f"La compensación es clara: {str(tradeoff).lower()}.{highlight}\n\n"
+        f"Dejé {alternative.lower()} como alternativa porque necesitaría mejores condiciones antes de ganar fuerza. "
+        f"Esta semana, el paso más honesto sería {first_step.lower()}; desbloquea evidencia real sin obligarte a saltar de golpe. "
+        "La decisión sigue siendo tuya, y todavía puedes ajustar el rumbo con calma.\n\n"
         "Con cariño,\nSue"
     )
 

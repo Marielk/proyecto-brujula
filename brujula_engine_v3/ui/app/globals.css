@@ -887,6 +887,61 @@ progress::-webkit-progress-value {
   margin-top: 26px;
 }
 
+.changeRecommendationCard {
+  grid-column: 1 / -1;
+}
+
+.changeRecommendationCard h3 {
+  color: var(--v08-teal);
+  font-family: var(--font-serif);
+  font-size: 30px;
+  margin-bottom: 18px;
+}
+
+.changeRecommendationCard ul,
+.debugGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.changeRecommendationCard li {
+  background: rgba(253, 251, 247, 0.58);
+  border: 1px solid rgba(75, 101, 71, 0.08);
+  border-radius: 18px;
+  color: var(--v08-muted);
+  line-height: 1.45;
+  list-style: none;
+  padding: 14px 18px;
+}
+
+.debugGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 22px 0;
+}
+
+.debugGrid div {
+  background: rgba(253, 251, 247, 0.58);
+  border: 1px solid rgba(75, 101, 71, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.debugGrid span {
+  color: var(--v08-muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.debugGrid strong {
+  color: var(--v08-teal);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
 .evaluationPetals {
   display: grid;
   gap: 12px;
@@ -1404,7 +1459,8 @@ progress::-webkit-progress-value {
   .pathStats,
   .alternativeGrid,
   .evaluationPetals,
-  .clusterGarden > div:last-child {
+  .clusterGarden > div:last-child,
+  .debugGrid {
     grid-template-columns: 1fr;
   }
 

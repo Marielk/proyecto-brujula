@@ -6,10 +6,20 @@ from typing import Any
 
 from brujula_engine.llm.ollama_client import OllamaClient
 from brujula_engine.simulation.journey_goal import interpret_goal
+from brujula_engine.simulation.journey_personalization import (
+    build_goal_profile_v2,
+    genericity_guard,
+    milestones_from_path,
+    path_schema_v2,
+    scoring_policy,
+    select_goal_context,
+    what_could_change_recommendation,
+)
 from brujula_engine.simulation.loader import scenario_from_dict, validate_scenario
+from brujula_engine.presentation.life_report import refresh_report_for_selected_path
 
 
-DOMAINS = {"salud", "vivienda", "familia", "emprendimiento", "educacion", "creatividad", "general"}
+DOMAINS = {"salud", "vivienda", "familia", "emprendimiento", "educacion", "creatividad", "carrera", "general"}
 DOMAIN_POLICIES = {
     "salud": {"label": "Salud", "quality": 0.20, "serenity": 0.18, "resilience": 0.18, "hope": 0.12, "values": 0.12, "sustainability": 0.20},
     "vivienda": {"label": "Vivienda", "quality": 0.14, "serenity": 0.14, "resilience": 0.22, "hope": 0.10, "values": 0.10, "sustainability": 0.30},
@@ -17,6 +27,7 @@ DOMAIN_POLICIES = {
     "emprendimiento": {"label": "Emprendimiento", "quality": 0.14, "serenity": 0.12, "resilience": 0.18, "hope": 0.18, "values": 0.16, "sustainability": 0.22},
     "educacion": {"label": "Educacion", "quality": 0.16, "serenity": 0.18, "resilience": 0.16, "hope": 0.18, "values": 0.18, "sustainability": 0.14},
     "creatividad": {"label": "Creatividad", "quality": 0.18, "serenity": 0.14, "resilience": 0.14, "hope": 0.22, "values": 0.20, "sustainability": 0.12},
+    "carrera": {"label": "Carrera", "quality": 0.12, "serenity": 0.12, "resilience": 0.16, "hope": 0.14, "values": 0.14, "sustainability": 0.14},
     "general": {"label": "General", "quality": 0.18, "serenity": 0.16, "resilience": 0.16, "hope": 0.16, "values": 0.16, "sustainability": 0.18},
 }
 
@@ -31,11 +42,11 @@ Objetivo:
 Perfil resumido:
 {json.dumps(life_profile or {}, ensure_ascii=False)[:2500]}
 
-Dominios disponibles: salud, vivienda, familia, emprendimiento, educacion, creatividad, general.
+Dominios disponibles: salud, vivienda, familia, emprendimiento, educacion, creatividad, carrera, general.
 
 Forma obligatoria:
 {{
-  "domain": "salud|vivienda|familia|emprendimiento|educacion|creatividad|general",
+  "domain": "salud|vivienda|familia|emprendimiento|educacion|creatividad|carrera|general",
   "secondaryDomains": ["finanzas", "salud"],
   "goalType": "tipo breve del objetivo",
   "intention": "intención humana en una frase",
@@ -50,14 +61,16 @@ Forma obligatoria:
             [
                 {
                     "role": "system",
-                    "content": "Eres Goal Interpreter de Brújula. Clasificas sueños de vida sin inventar dominios nuevos.",
+                "content": "Eres Goal Interpreter de Brújula. Clasificas sueños de vida sin inventar dominios nuevos.",
                 },
                 {"role": "user", "content": prompt},
             ],
             temperature=0.15,
-            num_predict=450,
+            num_predict=1100,
         )
-        domain = raw.get("domain") if raw.get("domain") in DOMAINS else deterministic["spec"]["domain"]
+        raw_domain = raw.get("domain") if raw.get("domain") in DOMAINS else None
+        deterministic_domain = deterministic["spec"]["domain"]
+        domain = deterministic_domain if deterministic_domain != "general" and raw_domain == "general" else raw_domain or deterministic_domain
         spec = deterministic["spec"].copy()
         spec.update(
             {
@@ -69,16 +82,18 @@ Forma obligatoria:
                 "supported": domain != "general",
             }
         )
+        ai_profile = {
+            "secondaryDomains": _list_or([], raw.get("secondaryDomains")),
+            "intention": raw.get("intention", ""),
+            "expectedRisks": _list_or([], raw.get("expectedRisks")),
+            "involvedValues": _list_or([], raw.get("involvedValues")),
+            "assumptions": _list_or([], raw.get("assumptions")),
+        }
+        spec = build_goal_profile_v2(spec, text, life_profile, ai_profile)
         return {
             **deterministic,
             "spec": spec,
-            "aiProfile": {
-                "secondaryDomains": _list_or([], raw.get("secondaryDomains")),
-                "intention": raw.get("intention", ""),
-                "expectedRisks": _list_or([], raw.get("expectedRisks")),
-                "involvedValues": _list_or([], raw.get("involvedValues")),
-                "assumptions": _list_or([], raw.get("assumptions")),
-            },
+            "aiProfile": ai_profile,
             "unsupportedWarning": None
             if spec["supported"]
             else "Este tipo de viaje todavía utiliza un modelo general. La simulación puede ser menos precisa.",
@@ -88,13 +103,23 @@ Forma obligatoria:
 
 
 def generate_candidate_paths_with_ai(client: OllamaClient, text: str, goal: dict, life_profile: dict | None = None) -> tuple[list[dict], bool, str | None]:
-    prompt = f"""Crea 5 caminos alternativos plausibles para alcanzar este sue?o. Responde JSON compacto.
+    context_selection = select_goal_context(life_profile, goal["spec"]["domain"])
+    compact_prompt = _compact_path_prompt(text, goal, context_selection)
+    prompt = f"""Crea entre 4 y 6 estrategias realmente distintas para este objetivo de Brújula. Responde JSON compacto.
 
 Objetivo: {text}
-Dominio: {goal["spec"]["domain"]}
-Tipo: {goal["spec"]["goalType"]}
+GoalProfile v2:
+{json.dumps(goal["spec"], ensure_ascii=False, indent=2)}
 
-Usa estrategias distintas cuando sea posible: pausada, gradual, intensiva, alianza, financiada.
+Contexto relevante seleccionado:
+{json.dumps(context_selection, ensure_ascii=False, indent=2)[:3000]}
+
+Reglas:
+- Diferencia rutas por decisiones de estrategia, no solo por ritmo.
+- Completa pasos concretos, recursos, condiciones de avance, pausas y criterio de éxito.
+- Evita consejos universales salvo que sean causalmente necesarios para esta meta.
+- No inventes montos, diagnósticos ni garantías.
+- Si la controlabilidad es baja, no presentes la ruta como plan para provocar el evento.
 
 Forma exacta:
 {{
@@ -103,29 +128,59 @@ Forma exacta:
       "id": "path_a",
       "name": "Nombre breve",
       "strategy": "pausada|gradual|intensiva|alianza|financiada",
+      "domain": "{goal["spec"]["domain"]}",
+      "specificOutcome": "resultado específico de la ruta",
       "description": "Una frase concreta",
-      "timeEstimate": "3 a?os",
+      "timeEstimate": "12 meses",
+      "timeEstimateMonths": 12,
       "financialRisk": "bajo|medio|alto",
       "energyDemand": "baja|media|alta",
-      "creativeUpside": "bajo|medio|alto"
+      "reversibility": "alta|media|baja",
+      "assumptions": ["..."],
+      "requirements": ["..."],
+      "steps": [
+        {{
+          "id": "audit",
+          "phase": 1,
+          "title": "Etapa concreta",
+          "durationWeeks": 2,
+          "actions": ["..."],
+          "completionCriteria": ["..."],
+          "expectedEffects": {{"clarity": 8, "energy": -1}}
+        }}
+      ],
+      "advanceConditions": ["..."],
+      "pauseConditions": ["..."],
+      "successCriteria": ["..."],
+      "tradeoffs": ["..."],
+      "domainBenefit": {{"name": "empleabilidad", "level": "alta"}}
     }}
   ]
 }}"""
     try:
-        raw = client.chat_json(
-            [
-                {"role": "system", "content": "Eres Path Generator de Br?jula. Devuelve solo JSON compacto con la clave paths."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.35,
-            num_predict=850,
-        )
-        paths = _normalize_paths(raw.get("paths") or raw.get("rutas") or raw.get("routes") or [], goal)
+        try:
+            paths = _generate_paths_once(client, compact_prompt, goal, num_predict=1200)
+        except Exception:
+            paths = []
+        if len(paths) < 2:
+            paths = _generate_paths_once(client, prompt, goal, num_predict=1800)
         if len(paths) < 2:
             raise ValueError("Ollama gener? menos de dos caminos ?tiles.")
         return paths[:7], True, None
     except Exception as exc:
         return fallback_candidate_paths(goal), False, str(exc)
+
+
+def _generate_paths_once(client: OllamaClient, prompt: str, goal: dict, num_predict: int) -> list[dict]:
+    raw = client.chat_json(
+        [
+            {"role": "system", "content": "Eres Path Generator de Brújula. Devuelve solo JSON válido con la clave paths."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.25,
+        num_predict=num_predict,
+    )
+    return _normalize_paths(_raw_paths(raw), goal)
 
 
 def fallback_candidate_paths(goal: dict) -> list[dict]:
@@ -178,6 +233,14 @@ def fallback_candidate_paths(goal: dict) -> list[dict]:
             ("colectivo", "Crear con colectivo o taller", "alianza", "Sostener ritmo creativo con pares y una red de cuidado.", "medio", "media", "alto"),
             ("preventa_obra", "Financiar una obra por preventa", "financiada", "Validar interés y recursos antes de dedicar más tiempo.", "alto", "media", "alto"),
         ]
+    elif domain == "carrera":
+        seeds = [
+            ("portfolio_return", "Regreso a UX con portafolio actualizado", "gradual", "Actualizar evidencia profesional mientras mantiene ingresos actuales.", "bajo", "media", "medio"),
+            ("network_market", "Activación de red y entrevistas informativas", "alianza", "Usar conversaciones profesionales para calibrar rol, renta y brechas antes de postular.", "bajo", "media", "medio"),
+            ("focused_applications", "Postulación selectiva a roles compatibles", "gradual", "Preparar casos de estudio y postular a vacantes donde la experiencia previa sea ventaja.", "medio", "media", "medio"),
+            ("freelance_bridge", "Puente freelance con clientes pequeños", "paralela", "Validar independencia profesional con encargos acotados antes de cambiar de base laboral.", "medio", "alta", "alto"),
+            ("intensive_reskill", "Reconversión intensiva con mentoría", "intensiva", "Cerrar brechas rápido con mentoría, aceptando mayor demanda de energía por un periodo corto.", "alto", "alta", "medio"),
+        ]
     else:
         seeds = [
             ("experimento", "Experimento pequeño", "pausada", "Probar el sueño durante 30 días con bajo riesgo.", "bajo", "baja", "medio"),
@@ -186,8 +249,8 @@ def fallback_candidate_paths(goal: dict) -> list[dict]:
             ("alianza", "Ruta acompañada", "alianza", "Buscar apoyo o colaboración para reducir carga individual.", "medio", "media", "medio"),
             ("pausa", "Preparar antes de actuar", "pausada", "Fortalecer bases antes de mover piezas grandes.", "bajo", "baja", "bajo"),
         ]
-    return [
-        {
+    paths = [
+        path_schema_v2({
             "id": id_,
             "name": name,
             "strategy": strategy,
@@ -201,9 +264,17 @@ def fallback_candidate_paths(goal: dict) -> list[dict]:
             "steps": _structured_steps(strategy, domain),
             "decisions": _structured_decisions(strategy, domain),
             "expectedEffects": _structured_effects(financial_risk, energy_demand, creative_upside),
-        }
+        }, goal)
         for id_, name, strategy, description, financial_risk, energy_demand, creative_upside in seeds
     ]
+    if goal["spec"].get("controllability") == "low":
+        for path in paths:
+            path["name"] = "Explorar escenario hipotético: " + path["name"].lower()
+            path["description"] = "Este camino no intenta provocar el evento aleatorio; ordena qué decidirías si ocurriera."
+            path["financialRisk"] = "bajo"
+            path["energyDemand"] = "baja"
+            path["successCriteria"] = ["Reformular el deseo como objetivo financiero controlable", "Definir decisiones prudentes si el evento ocurriera"]
+    return paths
 
 
 def expand_candidate_paths(base_paths: list[dict], goal: dict, target: int = 90) -> list[dict]:
@@ -238,7 +309,7 @@ def expand_candidate_paths(base_paths: list[dict], goal: dict, target: int = 90)
                     variant["steps"] = _structured_steps(variant["strategy"], goal["spec"]["domain"], variant["variant"])
                     variant["decisions"] = _structured_decisions(variant["strategy"], goal["spec"]["domain"], variant["variant"])
                     variant["expectedEffects"] = _structured_effects(variant["financialRisk"], variant["energyDemand"], variant["creativeUpside"])
-                    variants.append(variant)
+                    variants.append(path_schema_v2(variant, goal))
                     if len(variants) >= target:
                         return variants
     return variants
@@ -326,8 +397,11 @@ def compare_evaluated_paths(evaluated: list[dict]) -> dict:
 def candidate_summary(path: dict, summary: dict, life_report: dict) -> dict:
     guidance = life_report["journeyGuidance"]
     life = life_report["lifeSummary"]
-    policy = DOMAIN_POLICIES.get(guidance["goal"].get("domain"), DOMAIN_POLICIES["general"])
+    domain = guidance["goal"].get("domain")
+    policy = DOMAIN_POLICIES.get(domain, DOMAIN_POLICIES["general"])
+    v2_policy = scoring_policy(domain or "general")
     sustainability = _sustainability_score(path, life)
+    domain_score = _domain_metric_score(life.get("domainMetrics", {}), path)
     quality = life["calidadVida"]
     serenity = life["serenidad"]
     resilience = life["resiliencia"]
@@ -335,14 +409,15 @@ def candidate_summary(path: dict, summary: dict, life_report: dict) -> dict:
     regret = 100 - _risk_number(life["probabilidadArrepentimiento"])
     values = _value_coherence(path, life)
     selection_score = (
-        quality * policy["quality"]
-        + serenity * policy["serenity"]
-        + resilience * policy["resilience"]
-        + hope * policy["hope"]
-        + values * policy["values"]
-        + sustainability * policy["sustainability"]
-        + regret * 0.08
-        - _path_penalty(path) * 0.35
+        domain_score * v2_policy["domain"]
+        + sustainability * v2_policy["sustainability"]
+        + values * v2_policy["values"]
+        + regret * v2_policy["regret"]
+        + quality * policy["quality"] * 0.35
+        + serenity * policy["serenity"] * 0.35
+        + resilience * policy["resilience"] * 0.35
+        + hope * policy["hope"] * 0.25
+        - _path_penalty(path) * v2_policy["penalty"]
     )
     return {
         "id": path["id"],
@@ -352,13 +427,20 @@ def candidate_summary(path: dict, summary: dict, life_report: dict) -> dict:
         "assumptions": path.get("assumptions", []),
         "tradeoffs": path.get("tradeoffs", []),
         "steps": path.get("steps", []),
+        "requirements": path.get("requirements", []),
+        "advanceConditions": path.get("advanceConditions", []),
+        "pauseConditions": path.get("pauseConditions", []),
+        "successCriteria": path.get("successCriteria", []),
         "decisions": path.get("decisions", []),
         "expectedEffects": path.get("expectedEffects", []),
         "variant": path.get("variant", {}),
         "timeEstimate": path.get("timeEstimate", "3 a 5 años"),
+        "timeEstimateMonths": path.get("timeEstimateMonths"),
         "financialRisk": path.get("financialRisk", "medio"),
         "energyDemand": path.get("energyDemand", "media"),
+        "reversibility": path.get("reversibility", "alta"),
         "creativeUpside": path.get("creativeUpside", "medio"),
+        "domainBenefit": path.get("domainBenefit"),
         "preparation": guidance["preparation"],
         "compass": summary["compass"],
         "selectionScore": round(selection_score, 1),
@@ -367,6 +449,7 @@ def candidate_summary(path: dict, summary: dict, life_report: dict) -> dict:
         "domainPolicy": policy["label"],
         "evaluationDetails": {
             "sustainability": round(sustainability, 1),
+            "domainSpecific": round(domain_score, 1),
             "qualityOfLife": round(quality, 1),
             "serenity": round(serenity, 1),
             "resilience": round(resilience, 1),
@@ -407,6 +490,7 @@ def enrich_life_report_with_comparison(
     life_report["journeyGuidance"]["discardedReasons"] = qualitative.get("discardedReasons", []) or [reason for item in pruned_paths[:3] for reason in item.get("reasons", [])]
     life_report["journeyGuidance"]["domainPolicy"] = selected.get("domainPolicy")
     life_report["journeyGuidance"]["evaluationDetails"] = selected.get("evaluationDetails", {})
+    life_report["journeyGuidance"]["whatCouldChangeRecommendation"] = qualitative.get("whatCouldChangeRecommendation") or what_could_change_recommendation(selected, discarded, {"spec": life_report["journeyGuidance"]["goal"]}, life_report.get("profile", {}))
     life_report["lifeSummary"]["candidatePaths"] = [selected, *discarded]
     life_report["lifeSummary"]["exploredPaths"] = explored_paths or len([selected, *discarded])
     life_report["lifeSummary"]["clusteredPaths"] = clustered_paths
@@ -419,13 +503,14 @@ def enrich_life_report_with_comparison(
     life_report["lifeSummary"]["assumptions"] = assumptions
     life_report["lifeSummary"]["domainPolicy"] = selected.get("domainPolicy")
     life_report["lifeSummary"]["evaluationDetails"] = selected.get("evaluationDetails", {})
+    life_report["lifeSummary"]["whatCouldChangeRecommendation"] = life_report["journeyGuidance"]["whatCouldChangeRecommendation"]
     life_report["lifeSummary"]["aiParticipation"] = {"goalInterpreter": goal_ai_used, "pathGenerator": paths_ai_used}
     if decision_events:
         life_report["timeline"] = decision_events
         life_report["lifeSummary"]["eventosCamino"] = decision_events
         life_report["lifeSummary"]["domainMilestones"] = decision_events
         life_report["journeyGuidance"]["domainMilestones"] = decision_events
-    return life_report
+    return refresh_report_for_selected_path(life_report, selected)
 
 
 def _normalize_paths(paths: Any, goal: dict) -> list[dict]:
@@ -433,33 +518,86 @@ def _normalize_paths(paths: Any, goal: dict) -> list[dict]:
     for index, item in enumerate(paths if isinstance(paths, list) else []):
         if not isinstance(item, dict):
             continue
-        name = str(item.get("name") or item.get("nombre") or "").strip()
-        description = str(item.get("description") or item.get("descripcion") or "").strip()
+        name = str(item.get("name") or item.get("nombre") or item.get("title") or item.get("titulo") or "").strip()
+        description = str(item.get("description") or item.get("descripcion") or item.get("resumen") or item.get("summary") or "").strip()
         if not name:
             continue
         if not description:
             description = f"Explorar {name.lower()} con revisión de energía, dinero y apoyo antes de escalar."
         strategy = str(item.get("strategy") or "gradual").lower()
         normalized.append(
-            {
+            path_schema_v2({
                 "id": str(item.get("id") or f"path_{index + 1}"),
                 "name": name[:80],
                 "strategy": strategy if strategy in {"paralela", "gradual", "intensiva", "alianza", "financiada", "pausada"} else "gradual",
                 "description": description[:240],
+                "domain": str(item.get("domain") or goal["spec"]["domain"]),
+                "specificOutcome": str(item.get("specificOutcome") or goal["spec"].get("targetOutcome") or goal["spec"]["goalType"]),
                 "assumptions": _list_or([], item.get("assumptions")),
                 "tradeoffs": _list_or([], item.get("tradeoffs")),
                 "timeEstimate": str(item.get("timeEstimate") or "3 a 5 años"),
+                "timeEstimateMonths": item.get("timeEstimateMonths"),
                 "financialRisk": _risk_value(item.get("financialRisk")),
                 "energyDemand": _demand_value(item.get("energyDemand")),
+                "reversibility": str(item.get("reversibility") or "alta"),
                 "creativeUpside": _upside_value(item.get("creativeUpside")),
-                "steps": _list_or([], item.get("steps")),
-                "decisions": _list_or([], item.get("decisions")),
-                "expectedEffects": _list_or([], item.get("expectedEffects")),
-            }
+                "steps": _list_keep(item.get("steps")),
+                "requirements": _list_or([], item.get("requirements") or item.get("requisitos")),
+                "advanceConditions": _list_or([], item.get("advanceConditions") or item.get("condicionesAvance")),
+                "pauseConditions": _list_or([], item.get("pauseConditions") or item.get("condicionesPausa")),
+                "successCriteria": _list_or([], item.get("successCriteria") or item.get("criteriosExito")),
+                "decisions": _list_or([], item.get("decisions") or item.get("decisiones")),
+                "expectedEffects": _list_or([], item.get("expectedEffects") or item.get("efectosEsperados")),
+                "domainBenefit": item.get("domainBenefit") if isinstance(item.get("domainBenefit"), dict) else {},
+            }, goal)
         )
     for path in normalized:
         _ensure_structured_path(path, goal["spec"]["domain"])
     return _dedupe_paths(normalized) or fallback_candidate_paths(goal)
+
+
+def _raw_paths(raw: Any) -> list:
+    if isinstance(raw, list):
+        return raw
+    if not isinstance(raw, dict):
+        return []
+    for key in ("paths", "rutas", "routes", "caminos", "strategies", "estrategias"):
+        value = raw.get(key)
+        if isinstance(value, list):
+            return value
+    for value in raw.values():
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            return value
+    return []
+
+
+def _compact_path_prompt(text: str, goal: dict, context_selection: dict) -> str:
+    return f"""Objetivo: {text}
+Dominio: {goal["spec"]["domain"]}
+Tipo: {goal["spec"]["goalType"]}
+Resultado esperado: {goal["spec"].get("targetOutcome")}
+Contexto primario: {json.dumps(context_selection.get("primaryContext", {}), ensure_ascii=False)[:1200]}
+
+Devuelve JSON exacto:
+{{
+  "paths": [
+    {{
+      "id": "ruta_1",
+      "name": "nombre concreto",
+      "strategy": "gradual",
+      "description": "qué decisión diferencia esta ruta",
+      "timeEstimate": "12 meses",
+      "financialRisk": "bajo",
+      "energyDemand": "media",
+      "requirements": ["requisito específico"],
+      "decisions": ["decisión específica"],
+      "advanceConditions": ["condición para avanzar"],
+      "successCriteria": ["criterio de éxito"]
+    }}
+  ]
+}}
+
+Necesito 4 rutas distintas por estrategia real. No uses solo suave/balanceado/acelerado."""
 
 
 def _rule_for_path(path: dict, domain: str, year: int) -> dict:
@@ -526,7 +664,7 @@ def _rule_for_path(path: dict, domain: str, year: int) -> dict:
 def qualitative_comparison_with_ai(client: OllamaClient, top_paths: list[dict], goal: dict, life_summary: dict) -> tuple[dict, bool, str | None]:
     payload = {
         "goal": goal["spec"],
-        "topPaths": top_paths,
+        "topPaths": [_comparison_path_payload(path) for path in top_paths],
         "lifeSummary": {
             "calidadVida": life_summary.get("calidadVida"),
             "serenidad": life_summary.get("serenidad"),
@@ -535,14 +673,22 @@ def qualitative_comparison_with_ai(client: OllamaClient, top_paths: list[dict], 
             "valores": life_summary.get("valores", []),
         },
     }
-    prompt = f"""Compara cualitativamente estas tres rutas de Brújula.
+    prompt = f"""Compara estas rutas de Brújula con JSON breve y válido.
 
 Datos:
 {json.dumps(payload, ensure_ascii=False, indent=2)}
 
+Reglas:
+- Frases cortas, máximo 18 palabras por campo.
+- No repitas el nombre completo de la ruta como razón.
+- Devuelve JSON cerrado y sin markdown.
+
 Devuelve solo JSON:
 {{
   "recommendedReason": "...",
+  "whyNotOthers": [{{"pathId": "...", "reason": "..."}}],
+  "decisionTradeoff": "...",
+  "whatCouldChangeRecommendation": ["..."],
   "discardedReasons": ["..."],
   "lifeProtection": "...",
   "assumptions": ["..."]
@@ -554,10 +700,13 @@ Devuelve solo JSON:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.35,
-            num_predict=450,
+            num_predict=1400,
         )
         return {
             "recommendedReason": str(raw.get("recommendedReason") or ""),
+            "whyNotOthers": raw.get("whyNotOthers") if isinstance(raw.get("whyNotOthers"), list) else [],
+            "decisionTradeoff": str(raw.get("decisionTradeoff") or ""),
+            "whatCouldChangeRecommendation": _list_or([], raw.get("whatCouldChangeRecommendation")),
             "discardedReasons": _list_or([], raw.get("discardedReasons")),
             "lifeProtection": str(raw.get("lifeProtection") or ""),
             "assumptions": _list_or([], raw.get("assumptions")),
@@ -565,10 +714,30 @@ Devuelve solo JSON:
     except Exception as exc:
         return {
             "recommendedReason": "La ruta elegida protege mejor el equilibrio entre avance, descanso, dinero y sentido.",
+            "whyNotOthers": [{"pathId": path["id"], "reason": f"{path['name']} queda como alternativa si cambian sus supuestos principales."} for path in top_paths[1:]],
+            "decisionTradeoff": "Se privilegia reversibilidad y evidencia temprana por sobre velocidad.",
+            "whatCouldChangeRecommendation": [],
             "discardedReasons": [f"{path['name']} queda como alternativa si cambian sus supuestos principales." for path in top_paths[1:]],
             "lifeProtection": "La recomendación prioriza sostener la vida deseada antes que acelerar el resultado.",
             "assumptions": ["Comparación cualitativa generada por reglas locales por falta de respuesta IA."],
         }, False, str(exc)
+
+
+def _comparison_path_payload(path: dict) -> dict:
+    return {
+        "id": path.get("id"),
+        "name": path.get("name"),
+        "strategy": path.get("strategy"),
+        "description": path.get("description"),
+        "selectionScore": path.get("selectionScore"),
+        "financialRisk": path.get("financialRisk"),
+        "energyDemand": path.get("energyDemand"),
+        "reversibility": path.get("reversibility"),
+        "requirements": path.get("requirements", [])[:3],
+        "advanceConditions": path.get("advanceConditions", [])[:2],
+        "tradeoffs": path.get("tradeoffs", [])[:2],
+        "domainBenefit": path.get("domainBenefit"),
+    }
 
 
 def decision_timeline(path: dict, states: list) -> list[dict]:
@@ -633,6 +802,19 @@ def _sustainability_score(path: dict, life: dict) -> float:
     return max(0, min(100, base - _path_penalty(path) * 0.9 + _upside_score(path) * 0.08))
 
 
+def _domain_metric_score(metrics: dict, path: dict) -> float:
+    values = [float(value) for value in (metrics or {}).values() if isinstance(value, (int, float))]
+    if not values:
+        return 60
+    base = sum(values) / len(values)
+    benefit = path.get("domainBenefit") or {}
+    if benefit.get("level") == "alta":
+        base += 5
+    if path.get("reversibility") == "alta":
+        base += 3
+    return max(0, min(100, base))
+
+
 def _value_coherence(path: dict, life: dict) -> float:
     values = " ".join(life.get("valores", [])).lower()
     bonus = 8 if "creativ" in values and path.get("creativeUpside") == "alto" else 0
@@ -685,6 +867,12 @@ def _list_or(default: list, value: Any) -> list:
     if isinstance(value, list):
         return [str(item) for item in value if str(item).strip()]
     return default
+
+
+def _list_keep(value: Any) -> list:
+    if isinstance(value, list):
+        return [item for item in value if item]
+    return []
 
 
 def _risk_value(value: Any) -> str:

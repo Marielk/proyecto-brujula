@@ -9,6 +9,7 @@ from brujula_engine.simulation.journey_goal import (
     domain_strengths,
     domain_success_conditions,
 )
+from brujula_engine.simulation.journey_personalization import low_control_message, milestones_from_path
 from brujula_engine.simulation.life_profile import profile_context
 
 
@@ -37,6 +38,61 @@ def build_life_report(scenario, states, summary, life_profile: dict | None = Non
         "profile": context,
         "goal": goal["spec"],
     }
+
+
+def refresh_report_for_selected_path(life_report: dict, selected_path: dict) -> dict:
+    guidance = life_report["journeyGuidance"]
+    life = life_report["lifeSummary"]
+    goal = {**life_report.get("goal", guidance.get("goal", {})), "selectedPath": selected_path}
+    goal = {"spec": goal}
+    context = life_report.get("profile", {})
+    scores = {
+        "calidadVida": life["calidadVida"],
+        "libertadFinanciera": life["libertadFinanciera"],
+        "libertadCreativa": life["libertadCreativa"],
+        "saludIntegral": life["saludIntegral"],
+        "energiaVital": life["energiaVital"],
+        "fortalezaRelaciones": life.get("fortalezaRelaciones", 60),
+        "proposito": _level_number(life.get("coherenciaEstrellaNorte")),
+        "riesgoAgotamiento": _risk_number(life["riesgoAgotamiento"]),
+        "probabilidadArrepentimiento": _risk_number(life["probabilidadArrepentimiento"]),
+        "coherenciaEstrellaNorte": _level_number(life.get("coherenciaEstrellaNorte")),
+        "serenidad": life["serenidad"],
+        "resiliencia": life["resiliencia"],
+        "esperanza": life["esperanza"],
+        "financialTrend": 0,
+        "energyTrend": 0,
+    }
+    metrics = domain_metrics(goal, scores, {}, context)
+    flowers = domain_strengths(goal, metrics, scores, context)
+    cares = domain_risks(goal, metrics, scores, context)
+    milestones = milestones_from_path(selected_path) or domain_milestones(goal, context)
+    guidance.update(
+        {
+            "unsupportedWarning": low_control_message(goal) or guidance.get("unsupportedWarning"),
+            "conclusion": explain_conclusion(guidance["preparation"], flowers, cares, life_report["summary"]),
+            "flowers": flowers,
+            "cares": cares,
+            "domainMetrics": metrics,
+            "domainRisks": cares,
+            "successConditions": domain_success_conditions(goal, metrics, scores, context),
+            "avoidList": domain_avoid_list(goal, metrics, scores, context),
+            "firstStep": domain_first_step(goal, metrics, scores, context),
+            "domainMilestones": milestones,
+        }
+    )
+    life.update(
+        {
+            "domainMetrics": metrics,
+            "domainRisks": cares,
+            "successConditions": guidance["successConditions"],
+            "domainMilestones": milestones,
+            "eventosCamino": milestones,
+            "guiaViaje": guidance,
+        }
+    )
+    life_report["timeline"] = milestones
+    return life_report
 
 
 def _derived_scores(state, previous, base, context) -> dict:
@@ -264,6 +320,7 @@ def _life_summary(path, indices, scores, summary, scenario, states, context, jou
         "libertadCreativa": scores["libertadCreativa"],
         "saludIntegral": scores["saludIntegral"],
         "energiaVital": scores["energiaVital"],
+        "fortalezaRelaciones": scores["fortalezaRelaciones"],
         "serenidad": scores["serenidad"],
         "resiliencia": scores["resiliencia"],
         "esperanza": scores["esperanza"],
@@ -778,6 +835,14 @@ def _risk_text(value: float) -> str:
     if value < 85:
         return "Alta"
     return "Muy alta"
+
+
+def _risk_number(label: str) -> float:
+    return {"Muy baja": 10, "Baja": 28, "Media": 52, "Alta": 76, "Muy alta": 90}.get(str(label), 50)
+
+
+def _level_number(label: str) -> float:
+    return {"Crítico": 20, "Frágil": 40, "En construcción": 60, "Sólido": 76, "Fortaleza": 88}.get(str(label), 60)
 
 
 def _dreams(scenario) -> list[str]:

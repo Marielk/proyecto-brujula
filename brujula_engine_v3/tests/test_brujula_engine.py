@@ -22,6 +22,7 @@ from brujula_engine.simulation.journey_hybrid import (
     prune_candidate_paths,
     scenario_from_candidate_path,
 )
+from brujula_engine.simulation.journey_personalization import genericity_guard, select_goal_context
 from brujula_engine.simulation.life_profile import base_state_from_profile, profile_warnings
 from brujula_engine.simulation.loader import ScenarioValidationError, load_scenario
 from brujula_engine.simulation.ollama_report import generate_comparison_report, generate_scenario_report
@@ -174,6 +175,7 @@ class TestBrujulaEngine(unittest.TestCase):
             "Quiero vivir del arte": "emprendimiento",
             "Quiero estudiar un magister": "educacion",
             "Quiero escribir una novela": "creatividad",
+            "Quiero volver al diseño UX": "carrera",
         }
 
         for text, expected_domain in examples.items():
@@ -181,6 +183,14 @@ class TestBrujulaEngine(unittest.TestCase):
                 goal = interpret_goal(text)
                 self.assertEqual(goal["spec"]["domain"], expected_domain)
                 self.assertTrue(goal["spec"]["supported"])
+                self.assertIn("controllability", goal["spec"])
+
+    def test_goal_profile_v2_detects_low_controllability_random_event(self):
+        goal = interpret_goal("Quiero ganar la lotería")
+
+        self.assertEqual(goal["spec"]["controllability"], "low")
+        self.assertEqual(goal["spec"]["uncertaintyType"], "random_event")
+        self.assertIn("azar", goal["unsupportedWarning"])
 
     def test_domain_rules_change_metrics_conditions_and_first_step(self):
         scores = {
@@ -202,7 +212,7 @@ class TestBrujulaEngine(unittest.TestCase):
         }
         summary = {"weakest": "Estabilidad financiera"}
         context = {"savingsLevel": "Ninguno", "healthLimits": "Moderadamente"}
-        texts = ["mejorar mi salud", "comprar una casa", "tener un hijo", "vivir del arte"]
+        texts = ["mejorar mi salud", "comprar una casa", "tener un hijo", "vivir del arte", "volver a UX"]
         first_steps = []
         metric_sets = []
 
@@ -218,8 +228,8 @@ class TestBrujulaEngine(unittest.TestCase):
             self.assertGreaterEqual(len(conditions), 3)
             self.assertGreaterEqual(len(avoid), 2)
 
-        self.assertEqual(len(set(metric_sets)), 4)
-        self.assertEqual(len(set(first_steps)), 4)
+        self.assertEqual(len(set(metric_sets)), 5)
+        self.assertEqual(len(set(first_steps)), 5)
 
     def test_hybrid_fallback_creates_multiple_candidate_paths(self):
         goal = interpret_goal("Quiero comprar una casa en 2030")
@@ -229,6 +239,34 @@ class TestBrujulaEngine(unittest.TestCase):
         self.assertGreaterEqual(len(paths), 5)
         self.assertEqual(len({path["id"] for path in paths}), len(paths))
         self.assertTrue(all(path["financialRisk"] in {"bajo", "medio", "alto"} for path in paths))
+
+    def test_career_fallback_uses_path_schema_v2(self):
+        goal = interpret_goal("Quiero volver al diseño UX y mejorar mi renta")
+
+        paths = fallback_candidate_paths(goal)
+
+        self.assertGreaterEqual(len(paths), 5)
+        self.assertTrue(all(path["domain"] == "carrera" for path in paths))
+        self.assertTrue(all(path.get("requirements") for path in paths))
+        self.assertTrue(all(isinstance(path.get("steps", [])[0], dict) for path in paths))
+        self.assertIn("portafolio", " ".join(paths[0]["requirements"]).lower())
+
+    def test_context_selector_prioritizes_domain_relevant_profile(self):
+        profile = {
+            "identity": {"age": 35},
+            "workTime": {"area": "Diseño"},
+            "finances": {"debtLevel": "Media"},
+            "health": {"limitsProjects": "Moderadamente"},
+            "northStar": {"mainDream": "Volver a UX"},
+            "values": {"selected": ["Autonomía"]},
+            "wellbeingPreferences": {"recharges": ["Dormir"]},
+        }
+
+        selected = select_goal_context(profile, "carrera")
+
+        self.assertIn("workTime", selected["primaryContext"])
+        self.assertIn("finances", selected["primaryContext"])
+        self.assertIn("health", selected["secondaryContext"])
 
     def test_candidate_path_can_be_evaluated_by_journey_engine(self):
         goal = interpret_goal("Quiero vivir del arte cuidando mi salud")
@@ -257,6 +295,25 @@ class TestBrujulaEngine(unittest.TestCase):
         self.assertEqual(comparison["selected"]["id"], "b")
         self.assertEqual([path["id"] for path in comparison["discarded"]], ["c", "a"])
         self.assertIn(comparison["confidence"], {"baja", "media", "alta"})
+
+    def test_genericity_guard_requires_domain_specific_content(self):
+        goal = interpret_goal("Quiero volver al diseño UX")
+        path = fallback_candidate_paths(goal)[0]
+        report = {
+            "journeyGuidance": {
+                "goal": goal["spec"],
+                "selectedPath": path,
+                "firstStep": {"title": "Actualizar dos casos de estudio del portafolio UX"},
+                "successConditions": ["Portafolio revisado por dos personas", "Tres conversaciones de networking"],
+                "avoidList": ["Postular masivamente antes de actualizar evidencia"],
+                "domainMilestones": [{"title": "Reconstruir portafolio", "description": "Preparar casos de estudio"}],
+            }
+        }
+
+        guard = genericity_guard(report, "La decisión concreta es reconstruir portafolio antes de postular.")
+
+        self.assertTrue(guard["passed"])
+        self.assertIn("portafolio", guard["domainKeywordHits"])
 
     def test_path_expander_pruner_and_cluster_explore_many_futures(self):
         goal = interpret_goal("Quiero estudiar un magister sin quemarme")

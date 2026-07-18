@@ -28,7 +28,7 @@ export type LifeIndex = {
 };
 
 export type TimelineItem = {
-  year: number;
+  year: number | string;
   icon: string;
   title: string;
   description: string;
@@ -62,6 +62,9 @@ export type LifeSummary = {
   assumptions?: string[];
   domainPolicy?: string;
   evaluationDetails?: EvaluationDetails;
+  whatCouldChangeRecommendation?: string[];
+  genericityGuard?: GenericityGuard;
+  debug?: JourneyDebug;
   aiParticipation?: {
     goalInterpreter: boolean;
     pathGenerator: boolean;
@@ -111,6 +114,9 @@ export type JourneyGuidance = {
   assumptions?: string[];
   domainPolicy?: string;
   evaluationDetails?: EvaluationDetails;
+  whatCouldChangeRecommendation?: string[];
+  genericityGuard?: GenericityGuard;
+  debug?: JourneyDebug;
   conclusion: {
     tone: "promising" | "demanding" | "fragile";
     title: string;
@@ -136,11 +142,20 @@ export type JourneyGuidance = {
 
 export type GoalSpec = {
   domain: string;
+  secondaryDomains?: string[];
   goalType: string;
+  goalStatement?: string;
+  targetOutcome?: string;
   horizonYear?: number | null;
+  controllability?: "high" | "partial" | "low" | "exploratory" | string;
+  controllabilityLabel?: string;
+  uncertaintyType?: string;
   metrics: string[];
   requiredResources: string[];
   constraints: string[];
+  nonNegotiables?: string[];
+  successCriteria?: string[];
+  assumptions?: string[];
   supported: boolean;
 };
 
@@ -151,14 +166,25 @@ export type CandidatePath = {
   description: string;
   assumptions: string[];
   tradeoffs: string[];
-  steps?: string[];
+  steps?: Array<string | PathStep>;
+  requirements?: string[];
+  advanceConditions?: string[];
+  pauseConditions?: string[];
+  successCriteria?: string[];
   decisions?: string[];
   expectedEffects?: string[];
   variant?: Record<string, string>;
   timeEstimate: string;
+  timeEstimateMonths?: number;
   financialRisk: "bajo" | "medio" | "alto" | string;
   energyDemand: "baja" | "media" | "alta" | string;
+  reversibility?: "alta" | "media" | "baja" | string;
   creativeUpside: "bajo" | "medio" | "alto" | string;
+  domainBenefit?: {
+    name?: string;
+    metric?: string;
+    level?: string;
+  };
   preparation: number;
   compass: number;
   selectionScore: number;
@@ -169,6 +195,7 @@ export type CandidatePath = {
 };
 
 export type EvaluationDetails = {
+  domainSpecific?: number;
   sustainability?: number;
   qualityOfLife?: number;
   serenity?: number;
@@ -176,6 +203,43 @@ export type EvaluationDetails = {
   hope?: number;
   regretProtection?: number;
   valueCoherence?: number;
+};
+
+export type PathStep = {
+  id?: string;
+  phase?: number;
+  title: string;
+  durationWeeks?: number;
+  actions?: string[];
+  completionCriteria?: string[];
+  expectedEffects?: Record<string, number>;
+};
+
+export type GenericityGuard = {
+  passed: boolean;
+  domainKeywordHits: string[];
+  genericPhrases: string[];
+  blocksRegenerated: string[];
+  selectedDecisionMentions: number;
+};
+
+export type JourneyDebug = {
+  domain?: string;
+  domainLabel?: string;
+  controllability?: string;
+  scenarioType?: string;
+  primaryContext?: string[];
+  secondaryContext?: string[];
+  excludedContext?: string[];
+  basePaths?: number;
+  variants?: number;
+  prunedPaths?: number;
+  clusters?: number;
+  scoringPolicy?: string;
+  llm?: Record<string, boolean | string>;
+  fallbackUsed?: string[];
+  genericityGuard?: GenericityGuard;
+  durationMs?: Record<string, number>;
 };
 
 export type PathCluster = {
@@ -295,6 +359,7 @@ export type SimulationResult = {
   clusteredPaths?: PathCluster[];
   lifeProfile: LifeProfile | Record<string, unknown>;
   warnings: string[];
+  debug?: JourneyDebug;
   llm: {
     scenario: boolean;
     goal?: boolean;

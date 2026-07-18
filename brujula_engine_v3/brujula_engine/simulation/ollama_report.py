@@ -66,6 +66,8 @@ def generate_sue_letter(client: OllamaClient, life_summary: dict) -> str:
     compact_summary = {
         "domain": life_summary.get("domain"),
         "goalType": life_summary.get("goalType"),
+        "controllability": life_summary.get("guiaViaje", {}).get("goal", {}).get("controllability"),
+        "scenarioType": life_summary.get("guiaViaje", {}).get("goal", {}).get("controllabilityLabel"),
         "calidadVida": life_summary.get("calidadVida"),
         "serenidad": life_summary.get("serenidad"),
         "resiliencia": life_summary.get("resiliencia"),
@@ -80,6 +82,10 @@ def generate_sue_letter(client: OllamaClient, life_summary: dict) -> str:
             "name": selected_path.get("name"),
             "description": selected_path.get("description"),
             "strategy": selected_path.get("strategy"),
+            "requirements": selected_path.get("requirements", [])[:3],
+            "steps": selected_path.get("steps", [])[:3],
+            "decisions": selected_path.get("decisions", [])[:3],
+            "tradeoffs": selected_path.get("tradeoffs", [])[:2],
             "evaluationDetails": selected_path.get("evaluationDetails"),
         },
         "discardedPaths": [
@@ -87,6 +93,8 @@ def generate_sue_letter(client: OllamaClient, life_summary: dict) -> str:
             for path in life_summary.get("discardedPaths", [])[:2]
         ],
         "comparisonReasons": life_summary.get("comparisonReasons", [])[:4],
+        "whatCouldChangeRecommendation": life_summary.get("whatCouldChangeRecommendation", [])[:4],
+        "firstStep": life_summary.get("guiaViaje", {}).get("firstStep"),
         "discardedReasons": life_summary.get("discardedReasons", [])[:3],
         "assumptions": life_summary.get("assumptions", [])[:3],
         "perfil": life_summary.get("perfil", {}),
@@ -97,7 +105,8 @@ LifeSummary:
 {json.dumps(compact_summary, ensure_ascii=False, indent=2)}
 
 Reglas:
-- Máximo 3 párrafos breves.
+- Máximo 220 palabras.
+- La carta debe sentirse escrita solo para esta persona, este objetivo y esta ruta.
 - No repitas porcentajes.
 - No describas tablas.
 - No uses lenguaje técnico.
@@ -110,6 +119,9 @@ Reglas:
 - Menciona caminos descartados sin humillarlos: explica qué condición tendría que cambiar para que vuelvan a ser buena idea.
 - Explica por qué la ruta elegida protege mejor la vida que la persona desea construir.
 - Menciona una ruta alternativa solo como posibilidad futura, indicando que tendria que cambiar para ganar fuerza.
+- Menciona al menos una decisión o etapa específica de la ruta ganadora.
+- Explica una compensación concreta de la ruta elegida.
+- Si el escenarioType es dependiente del azar, dilo con honestidad: no hay ruta fiable para provocar el evento, solo exploración de decisiones si ocurriera.
 - No presentes la ruta elegida como destino obligatorio.
 - Menciona una fortaleza específica del dominio.
 - Menciona un cuidado concreto del dominio.
@@ -118,6 +130,7 @@ Reglas:
 - Si el dominio es familia, centra la carta en red de apoyo, tiempo, hogar y cuidados.
 - Si el dominio es emprendimiento, centra la carta en validación, ingresos, energía y transición gradual.
 - Termina con esperanza.
+- No uses frases que servirían igual para comprar casa, bajar de peso, estudiar o cambiar de empleo; si eso ocurre, reescribe.
 - Recuerda con suavidad que la decisión sigue siendo de la persona.
 
 Formato:
