@@ -2799,3 +2799,176 @@ tr:last-child td {
     width: 100%;
   }
 }
+
+/* Brújula v0.14 - flujo Modo Viaje en tres pantallas */
+.journeyControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  text-align: center;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(75, 101, 71, 0.18);
+  color: var(--book-sage);
+}
+
+.technicalMode {
+  border-top: 1px solid rgba(75, 101, 71, 0.12);
+  color: var(--book-muted);
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 14px;
+  text-align: left;
+}
+
+.technicalMode summary,
+.advancedJourney summary,
+.pathAlternatives summary,
+.clusterGarden summary,
+.domainMetricsCard summary,
+.reasoningCard summary,
+.conditionCard summary,
+.avoidCard summary,
+.sueJourneyLetter summary {
+  color: var(--book-sage);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+.journeyLoadingScreen,
+.journeyErrorScreen {
+  max-width: 960px;
+}
+
+.journeyLoading h1,
+.journeyErrorState h1 {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 500;
+  line-height: 1.04;
+  margin: 0;
+}
+
+.journeyLoading > p,
+.stageMessage,
+.journeyErrorState p {
+  color: var(--book-muted);
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 680px;
+}
+
+.journeyLoading progress {
+  max-width: 520px;
+}
+
+.loadingProgress {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: 28px;
+  margin-top: -18px;
+}
+
+.stageMessage {
+  color: var(--book-lavender);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-style: italic;
+}
+
+.loadingSteps {
+  max-width: 620px;
+  width: 100%;
+}
+
+.loadingSteps .pendingStep {
+  opacity: 0.42;
+}
+
+.loadingSteps .activeStep {
+  color: var(--book-sage);
+  font-weight: 700;
+}
+
+.loadingSteps .doneStep {
+  color: var(--book-muted);
+}
+
+.hybridIntro h1 {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 500;
+  line-height: 1.04;
+  margin: 10px 0 14px;
+}
+
+.hybridIntro h1:focus {
+  outline: 2px solid rgba(75, 101, 71, 0.32);
+  outline-offset: 8px;
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.resultMetaGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px 0;
+}
+
+.resultMetaGrid div {
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(75, 101, 71, 0.10);
+  border-radius: 18px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.resultMetaGrid strong {
+  color: var(--book-sage);
+  overflow-wrap: anywhere;
+}
+
+.journeyErrorState {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 820px;
+  padding: 46px;
+}
+
+.journeyErrorState span {
+  color: var(--book-lavender);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.journeyErrorState blockquote {
+  background: rgba(255, 255, 255, 0.48);
+  border-left: 4px solid var(--book-soft-sage);
+  color: var(--book-muted);
+  margin: 0;
+  padding: 16px 18px;
+}
+
+@media (max-width: 900px) {
+  .resultMetaGrid {
+    grid-template-columns: 1fr;
+  }
+}

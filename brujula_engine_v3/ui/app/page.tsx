@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { calculateGardenState, defaultCheckIn, gardenMoodLine, recommendRitual } from "../lib/garden";
 import type {
   DailyCheckIn,
@@ -20,17 +20,37 @@ import type {
 const STORAGE_KEY = "brujula.lifeProfile.v0.7";
 const CHECKIN_STORAGE_KEY = "brujula.dailyCheckIn.v0.8";
 const OUTCOME_STORAGE_KEY = "brujula.ritualOutcome.v0.8";
+const JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.14";
 const EXAMPLE =
   "Quiero simular dedicarme gradualmente a Brújula desde 2028, bajando horas del trabajo actual, haciendo freelance para sostener ingresos y cuidando mi salud física.";
-const JOURNEY_LOADING_STEPS = [
-  "Sue abre el mapa...",
-  "Comprendiendo tu sueño.",
-  "Recordando tu Perfil de Vida.",
-  "Explorando caminos posibles.",
-  "Buscando el sendero más amable.",
-  "Preparando una carta para ti."
-];
 type Mode = "home" | "garden" | "journey";
+type JourneyStage =
+  | "understanding_goal"
+  | "selecting_context"
+  | "generating_strategies"
+  | "expanding_paths"
+  | "pruning_paths"
+  | "comparing_paths"
+  | "building_result"
+  | "writing_letter"
+  | "completed";
+type JourneyFlowState =
+  | { status: "input"; goal: string }
+  | { status: "loading"; goal: string; simulationId: string; stage: JourneyStage; progress: number; message: string; startedAt: number }
+  | { status: "result"; goal: string; simulationId: string; result: SimulationResult; completedAt: string }
+  | { status: "error"; goal: string; simulationId?: string; message: string; recoverable: boolean };
+
+const JOURNEY_STAGE_DEFINITIONS: Array<{ id: JourneyStage; label: string; message: string; progress: number }> = [
+  { id: "understanding_goal", label: "Comprendiendo tu destino.", message: "Leyendo el destino y detectando el tipo de viaje.", progress: 8 },
+  { id: "selecting_context", label: "Relacionándolo con tu Perfil de Vida.", message: "Seleccionando los datos del perfil que influyen en esta ruta.", progress: 18 },
+  { id: "generating_strategies", label: "Creando estrategias diferentes.", message: "Armando estrategias base con ritmos y apuestas distintas.", progress: 32 },
+  { id: "expanding_paths", label: "Simulando variantes de cada camino.", message: "Explorando combinaciones de tiempo, apoyo, recursos y energía.", progress: 62 },
+  { id: "pruning_paths", label: "Descartando rutas frágiles o repetidas.", message: "Podando rutas que no agregan claridad o sostén suficiente.", progress: 78 },
+  { id: "comparing_paths", label: "Comparando los mejores senderos.", message: "Comparando preparación, riesgo, bienestar y reversibilidad.", progress: 90 },
+  { id: "building_result", label: "Preparando una explicación clara.", message: "Ordenando la recomendación y los primeros pasos.", progress: 96 },
+  { id: "writing_letter", label: "Sue está dejando por escrito lo más importante.", message: "Sue está resumiendo lo más importante del recorrido.", progress: 99 },
+  { id: "completed", label: "La ruta está lista.", message: "La ruta está lista.", progress: 100 }
+];
 
 const emptyProfile: LifeProfile = {
   identity: {
@@ -107,6 +127,32 @@ const steps = [
   "Lo que te hace bien"
 ];
 
+function createSimulationId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `sim_${crypto.randomUUID()}`;
+  }
+  return `sim_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function stageFromElapsed(elapsedMs: number) {
+  const elapsedSeconds = elapsedMs / 1000;
+  if (elapsedSeconds < 3) return JOURNEY_STAGE_DEFINITIONS[0];
+  if (elapsedSeconds < 7) return JOURNEY_STAGE_DEFINITIONS[1];
+  if (elapsedSeconds < 13) return JOURNEY_STAGE_DEFINITIONS[2];
+  if (elapsedSeconds < 42) return JOURNEY_STAGE_DEFINITIONS[3];
+  if (elapsedSeconds < 56) return JOURNEY_STAGE_DEFINITIONS[4];
+  if (elapsedSeconds < 72) return JOURNEY_STAGE_DEFINITIONS[5];
+  if (elapsedSeconds < 90) return JOURNEY_STAGE_DEFINITIONS[6];
+  return JOURNEY_STAGE_DEFINITIONS[7];
+}
+
+function formatSimulationDate(value: string) {
+  return new Intl.DateTimeFormat("es-CL", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
 export default function Home() {
   const [profile, setProfile] = useState<LifeProfile>(emptyProfile);
   const [hasProfile, setHasProfile] = useState(false);
@@ -116,11 +162,14 @@ export default function Home() {
   const [model, setModel] = useState("llama3.2:1b");
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState("");
+  const [journeyFlow, setJourneyFlow] = useState<JourneyFlowState>({ status: "input", goal: EXAMPLE });
   const [profileMessage, setProfileMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("home");
   const [checkIn, setCheckIn] = useState<DailyCheckIn>(defaultCheckIn);
   const [ritualOutcome, setRitualOutcome] = useState<RitualOutcome | null>(null);
+  const activeSimulationRef = useRef("");
+  const simulationAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -155,6 +204,48 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    const savedResults = window.localStorage.getItem(JOURNEY_RESULTS_STORAGE_KEY);
+    if (!savedResults) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(savedResults) as JourneyFlowState;
+      if (parsed.status === "result") {
+        setJourneyFlow(parsed);
+        setText(parsed.goal);
+        setResult(parsed.result);
+      }
+    } catch {
+      window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (journeyFlow.status !== "loading") {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setJourneyFlow((current) => {
+        if (current.status !== "loading" || current.simulationId !== journeyFlow.simulationId) {
+          return current;
+        }
+        const elapsed = Date.now() - current.startedAt;
+        const nextDefinition = stageFromElapsed(elapsed);
+        const progress = Math.max(current.progress, Math.min(nextDefinition.progress, 99));
+        return {
+          ...current,
+          stage: nextDefinition.id,
+          progress,
+          message: nextDefinition.message
+        };
+      });
+    }, 1400);
+
+    return () => window.clearInterval(interval);
+  }, [journeyFlow]);
+
   const validation = useMemo(() => validateProfile(profile), [profile]);
   const canFinish = validation.length === 0;
 
@@ -172,6 +263,7 @@ export default function Home() {
     setIsEditingProfile(true);
     setStep(0);
     setResult(null);
+    setJourneyFlow({ status: "input", goal: text });
     setMode("home");
   }
 
@@ -187,26 +279,110 @@ export default function Home() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await runJourney(text);
+  }
+
+  async function runJourney(nextGoal: string) {
+    const goal = nextGoal.trim();
+    if (!goal) {
+      setError("Escribe un destino para trazar la ruta.");
+      setJourneyFlow({ status: "error", goal: nextGoal, message: "Escribe un destino para trazar la ruta.", recoverable: true });
+      return;
+    }
+
+    simulationAbortRef.current?.abort();
+    const simulationId = createSimulationId();
+    activeSimulationRef.current = simulationId;
+    const abortController = new AbortController();
+    simulationAbortRef.current = abortController;
     setIsLoading(true);
     setError("");
     setResult(null);
+    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    setJourneyFlow({
+      status: "loading",
+      goal,
+      simulationId,
+      stage: "understanding_goal",
+      progress: 4,
+      message: "Leyendo el destino y preparando la simulación.",
+      startedAt: Date.now()
+    });
 
     try {
       const response = await fetch("/api/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, model, lifeProfile: profile })
+        body: JSON.stringify({ text: goal, model, lifeProfile: profile }),
+        signal: abortController.signal
       });
       const payload = await response.json();
+      if (activeSimulationRef.current !== simulationId) {
+        return;
+      }
       if (!payload.success) {
         throw new Error(payload.error || "No se pudo simular el escenario.");
       }
       setResult(payload.data);
+      const completedFlow: JourneyFlowState = {
+        status: "result",
+        goal,
+        simulationId,
+        result: payload.data,
+        completedAt: new Date().toISOString()
+      };
+      setJourneyFlow(completedFlow);
+      window.localStorage.setItem(JOURNEY_RESULTS_STORAGE_KEY, JSON.stringify(completedFlow));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido.");
+      if (activeSimulationRef.current !== simulationId || abortController.signal.aborted) {
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Error desconocido.";
+      setError(message);
+      setJourneyFlow({ status: "error", goal, simulationId, message, recoverable: true });
     } finally {
-      setIsLoading(false);
+      if (activeSimulationRef.current === simulationId) {
+        setIsLoading(false);
+      }
     }
+  }
+
+  async function retryJourney() {
+    const goal = journeyFlow.goal;
+    setText(goal);
+    await runJourney(goal);
+  }
+
+  function cancelJourney() {
+    simulationAbortRef.current?.abort();
+    activeSimulationRef.current = "";
+    setIsLoading(false);
+    setResult(null);
+    setError("");
+    setJourneyFlow((current) => ({ status: "input", goal: current.goal }));
+  }
+
+  function editJourneyGoal() {
+    setIsLoading(false);
+    setResult(null);
+    setError("");
+    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    setJourneyFlow((current) => {
+      const goal = current.status === "input" ? current.goal : current.goal;
+      setText(goal);
+      return { status: "input", goal };
+    });
+  }
+
+  function newJourney() {
+    simulationAbortRef.current?.abort();
+    activeSimulationRef.current = "";
+    setText("");
+    setResult(null);
+    setError("");
+    setIsLoading(false);
+    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    setJourneyFlow({ status: "input", goal: "" });
   }
 
   const showProfileForm = isEditingProfile || !hasProfile;
@@ -265,6 +441,7 @@ export default function Home() {
             <JourneyMode
               profile={profile}
               profileMessage={profileMessage}
+              flow={journeyFlow}
               text={text}
               model={model}
               result={result}
@@ -273,6 +450,10 @@ export default function Home() {
               onText={setText}
               onModel={setModel}
               onSubmit={submit}
+              onCancel={cancelJourney}
+              onRetry={retryJourney}
+              onEditGoal={editJourneyGoal}
+              onNewJourney={newJourney}
               onEditProfile={() => setIsEditingProfile(true)}
               onDeleteProfile={deleteProfile}
             />
@@ -441,6 +622,7 @@ function GardenMode({
 function JourneyMode({
   profile,
   profileMessage,
+  flow,
   text,
   model,
   result,
@@ -449,11 +631,16 @@ function JourneyMode({
   onText,
   onModel,
   onSubmit,
+  onCancel,
+  onRetry,
+  onEditGoal,
+  onNewJourney,
   onEditProfile,
   onDeleteProfile
 }: {
   profile: LifeProfile;
   profileMessage: string;
+  flow: JourneyFlowState;
   text: string;
   model: string;
   result: SimulationResult | null;
@@ -462,73 +649,163 @@ function JourneyMode({
   onText: (value: string) => void;
   onModel: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  onRetry: () => void;
+  onEditGoal: () => void;
+  onNewJourney: () => void;
   onEditProfile: () => void;
   onDeleteProfile: () => void;
 }) {
+  const destinationRef = useRef<HTMLTextAreaElement | null>(null);
+  const resultTitleRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    if (flow.status === "input") {
+      destinationRef.current?.focus();
+    }
+    if (flow.status === "result") {
+      resultTitleRef.current?.focus();
+    }
+  }, [flow.status]);
+
+  if (flow.status === "loading") {
+    return <JourneyLoading flow={flow} onCancel={onCancel} />;
+  }
+
+  if (flow.status === "error") {
+    return (
+      <JourneyError
+        flow={flow}
+        technicalError={error}
+        onRetry={onRetry}
+        onEditGoal={onEditGoal}
+        onHome={onNewJourney}
+      />
+    );
+  }
+
+  if (flow.status === "result" && result) {
+    return (
+      <JourneyResults
+        result={result}
+        goal={flow.goal}
+        simulationId={flow.simulationId}
+        completedAt={flow.completedAt}
+        titleRef={resultTitleRef}
+        onEditGoal={onEditGoal}
+        onNewJourney={onNewJourney}
+      />
+    );
+  }
+
   return (
     <section className="journeyScreen">
       <header className="journeyHeader">
         <h1>Planificar un Viaje</h1>
-        <p>Explora el camino hacia tu sueño con tu Perfil de Vida como brújula.</p>
+        <p>Explora el camino hacia tu sueño utilizando tu Perfil de Vida como brújula.</p>
       </header>
 
-      <form className="journeyInput glassPanel" onSubmit={onSubmit}>
-        <label htmlFor="scenario">¿Cuál es tu destino final?</label>
-        <textarea id="scenario" value={text} onChange={(event) => onText(event.target.value)} rows={4} placeholder="Ej: Dedicarme gradualmente al arte, cuidar mi salud y sostener mis ingresos..." />
+      <form className="journeyInput glassPanel" id="journey-form" name="journey-form" onSubmit={onSubmit}>
+        <label htmlFor="scenario">¿Cuál es tu destino?</label>
+        <textarea ref={destinationRef} id="scenario" value={text} onChange={(event) => onText(event.target.value)} rows={4} placeholder="Ej: Dedicarme gradualmente al arte, cuidar mi salud y sostener mis ingresos..." />
         <div className="journeyControls">
+          <button type="submit" disabled={isLoading || !text.trim()}>{isLoading ? "Trazando ruta..." : "Trazar ruta"}</button>
+          <button className="secondaryButton" type="button" onClick={onEditProfile}>Revisar Perfil de Vida</button>
+        </div>
+        <details className="technicalMode">
+          <summary>Modo técnico</summary>
           <label htmlFor="model">Modelo Ollama</label>
           <input id="model" value={model} onChange={(event) => onModel(event.target.value)} />
-          <button type="submit" disabled={isLoading || !text.trim()}>{isLoading ? "Trazando ruta..." : "Trazar ruta ✨"}</button>
-        </div>
+        </details>
       </form>
 
-      {error && <div className="error journeyError">{error}</div>}
-
-      {!result && !isLoading && (
-        <div className="journeyEmpty glassPanel">
-          <ProfileSummary profile={profile} message={profileMessage} onEdit={onEditProfile} onDelete={onDeleteProfile} />
-          <p>Describe un camino posible. Brújula lo transformará en ruta, riesgos, hitos y carta de Sue.</p>
-        </div>
-      )}
-
-      {isLoading && <JourneyLoading />}
-
-      {result && <JourneyResults result={result} />}
+      <div className="journeyEmpty glassPanel">
+        <ProfileSummary profile={profile} message={profileMessage} onEdit={onEditProfile} onDelete={onDeleteProfile} />
+      </div>
     </section>
   );
 }
 
-function JourneyLoading() {
-  const [visibleSteps, setVisibleSteps] = useState(1);
-
-  useEffect(() => {
-    setVisibleSteps(1);
-    const interval = window.setInterval(() => {
-      setVisibleSteps((current) => Math.min(current + 1, JOURNEY_LOADING_STEPS.length));
-    }, 1150);
-
-    return () => window.clearInterval(interval);
-  }, []);
-
+function JourneyLoading({ flow, onCancel }: { flow: Extract<JourneyFlowState, { status: "loading" }>; onCancel: () => void }) {
+  const currentIndex = JOURNEY_STAGE_DEFINITIONS.findIndex((stage) => stage.id === flow.stage);
+  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
   return (
-    <div className="journeyLoading">
+    <section className="journeyScreen journeyLoadingScreen" aria-busy="true">
+      <div className="journeyLoading">
       <div className="loadingOrb" aria-hidden="true">
         <img src="/assets/sue-mapa.png" alt="" />
       </div>
-      <h2>Sue está leyendo el mapa...</h2>
+      <h1>Brújula está explorando muchos futuros posibles.</h1>
+      <p>Estamos recorriendo distintas rutas para encontrar aquella que mejor equilibra bienestar, propósito y posibilidades reales.</p>
+      <progress max={100} value={flow.progress} aria-label={`Progreso de la simulación: ${flow.progress}%`} />
+      <strong className="loadingProgress">{flow.progress}%</strong>
+      <p className="stageMessage" aria-live="polite">{flow.message}</p>
       <div className="loadingSteps">
-        {JOURNEY_LOADING_STEPS.slice(0, visibleSteps).map((item, index) => (
-          <p className={index === visibleSteps - 1 ? "activeStep" : "doneStep"} key={item}>
-            <span>{index === visibleSteps - 1 ? "•" : "✓"}</span>{item}
+        {JOURNEY_STAGE_DEFINITIONS.map((item, index) => (
+          <p className={index < safeIndex ? "doneStep" : index === safeIndex ? "activeStep" : "pendingStep"} key={item.id}>
+            <span>{index < safeIndex ? "✓" : index === safeIndex ? "•" : "·"}</span>{item.label}
           </p>
         ))}
       </div>
-      <small>Un momento de calma mientras trazamos el camino.</small>
-    </div>
+      <button className="secondaryButton" type="button" onClick={onCancel}>Cancelar simulación</button>
+      </div>
+    </section>
   );
 }
 
-function JourneyResults({ result }: { result: SimulationResult }) {
+function JourneyError({
+  flow,
+  technicalError,
+  onRetry,
+  onEditGoal,
+  onHome
+}: {
+  flow: Extract<JourneyFlowState, { status: "error" }>;
+  technicalError: string;
+  onRetry: () => void;
+  onEditGoal: () => void;
+  onHome: () => void;
+}) {
+  return (
+    <section className="journeyScreen journeyErrorScreen">
+      <article className="journeyErrorState glassPanel">
+        <span>Viaje interrumpido</span>
+        <h1>Parece que la niebla cubrió el sendero.</h1>
+        <p>No pudimos completar esta simulación, pero tu destino sigue guardado.</p>
+        <blockquote>{flow.goal}</blockquote>
+        <div className="resultActions">
+          <button type="button" onClick={onRetry}>Reintentar</button>
+          <button className="secondaryButton" type="button" onClick={onEditGoal}>Editar destino</button>
+          <button className="secondaryButton" type="button" onClick={onHome}>Volver al inicio</button>
+        </div>
+        {technicalError && (
+          <details className="technicalMode">
+            <summary>Detalle técnico</summary>
+            <p>{technicalError}</p>
+          </details>
+        )}
+      </article>
+    </section>
+  );
+}
+
+function JourneyResults({
+  result,
+  goal,
+  simulationId,
+  completedAt,
+  titleRef,
+  onEditGoal,
+  onNewJourney
+}: {
+  result: SimulationResult;
+  goal: string;
+  simulationId: string;
+  completedAt: string;
+  titleRef: { current: HTMLHeadingElement | null };
+  onEditGoal: () => void;
+  onNewJourney: () => void;
+}) {
   const guidance = result.lifeReport.journeyGuidance || fallbackJourneyGuidance(result);
   const selectedPath = guidance.selectedPath || result.selectedPath;
   const candidatePaths = guidance.candidatePaths || result.candidatePaths || [];
@@ -540,12 +817,34 @@ function JourneyResults({ result }: { result: SimulationResult }) {
   const effort = effortFromResult(result);
   const scenarioType = guidance.goal?.controllabilityLabel || result.debug?.scenarioType;
   const debug = guidance.debug || result.debug;
+  const baseStrategies = debug?.basePaths ?? candidatePaths.length;
+  const variants = debug?.variants ?? exploredPaths;
+  const pruned = debug?.prunedPaths ?? Math.max(0, variants - exploredPaths);
+  const finalRoutes = selectedPath ? 1 : 0;
   return (
     <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
       <article className="hybridIntro glassPanel">
-        <span>Explorador de futuros v0.12</span>
-        <h2>Exploré {exploredPaths} futuros plausibles antes de sugerirte un sendero.</h2>
+        <span>Resultado del viaje</span>
+        <h1 ref={titleRef} tabIndex={-1}>Exploré {variants} variantes de varios caminos posibles.</h1>
         <p>Brújula expandió estrategias base, podó rutas frágiles, agrupó caminos parecidos y eligió la alternativa que mejor protege tu vida cotidiana.</p>
+        <div className="resultActions">
+          <button type="button" onClick={onNewJourney}>Trazar un nuevo viaje</button>
+          <button className="secondaryButton" type="button" onClick={onEditGoal}>Editar este destino</button>
+        </div>
+        <div className="resultMetaGrid">
+          <div><span>Destino simulado</span><strong>{goal}</strong></div>
+          {guidance.goal && <div><span>Dominio detectado</span><strong>{domainLabel(guidance.goal.domain)}</strong></div>}
+          {scenarioType && <div><span>Tipo de escenario</span><strong>{scenarioType}</strong></div>}
+          {selectedPath && <div><span>Ruta recomendada</span><strong>{selectedPath.name}</strong></div>}
+          <div><span>Preparación</span><strong>{preparation}%</strong></div>
+          <div><span>Fecha</span><strong>{formatSimulationDate(completedAt)}</strong></div>
+          <div><span>Estrategias base</span><strong>{baseStrategies}</strong></div>
+          <div><span>Variantes evaluadas</span><strong>{variants}</strong></div>
+          <div><span>Rutas descartadas</span><strong>{pruned}</strong></div>
+          <div><span>Familias de caminos</span><strong>{clusters.length}</strong></div>
+          <div><span>Rutas finalistas</span><strong>{Math.max(finalRoutes, candidatePaths.length ? Math.min(3, candidatePaths.length) : 0)}</strong></div>
+          <div><span>ID simulación</span><strong>{simulationId}</strong></div>
+        </div>
         <div className="hybridStatus">
           {guidance.goal && <span className="okPill">Dominio: {domainLabel(guidance.goal.domain)}</span>}
           {scenarioType && <span className={guidance.goal?.controllability === "low" ? "fallbackPill" : "okPill"}>Escenario: {scenarioType}</span>}
@@ -605,7 +904,8 @@ function JourneyResults({ result }: { result: SimulationResult }) {
       )}
 
       {discardedPaths.length > 0 && (
-        <section className="pathAlternatives glassPanel">
+        <details className="pathAlternatives glassPanel">
+          <summary>Alternativas consideradas</summary>
           <div className="sectionTitle">
             <p className="eyebrow">Otros caminos considerados</p>
             <h3>Qué tendría que cambiar para que otra ruta sea mejor</h3>
@@ -622,11 +922,12 @@ function JourneyResults({ result }: { result: SimulationResult }) {
               </article>
             ))}
           </div>
-        </section>
+        </details>
       )}
 
       {clusters.length > 0 && (
-        <section className="clusterGarden glassPanel">
+        <details className="clusterGarden glassPanel">
+          <summary>Familias de caminos</summary>
           <div className="sectionTitle">
             <p className="eyebrow">Agrupación de futuros</p>
             <h3>Familias de caminos exploradas</h3>
@@ -640,7 +941,7 @@ function JourneyResults({ result }: { result: SimulationResult }) {
               </article>
             ))}
           </div>
-        </section>
+        </details>
       )}
 
       <article className="routeCard guidanceHero glassPanel">
@@ -688,7 +989,8 @@ function JourneyResults({ result }: { result: SimulationResult }) {
       </article>
 
       {guidance.domainMetrics && (
-        <section className="domainMetricsCard glassPanel">
+        <details className="domainMetricsCard glassPanel">
+          <summary>Métricas del destino</summary>
           <h3>Métricas de este destino</h3>
           <div className="domainMetricGrid">
             {Object.entries(guidance.domainMetrics).map(([label, value]) => (
@@ -699,10 +1001,11 @@ function JourneyResults({ result }: { result: SimulationResult }) {
               </article>
             ))}
           </div>
-        </section>
+        </details>
       )}
 
-      <section className="reasoningCard glassPanel">
+      <details className="reasoningCard glassPanel">
+        <summary>Fortalezas y cuidados</summary>
         <h3>¿Por qué llegué a esta conclusión?</h3>
         <div className="reasonColumns">
           <div>
@@ -722,25 +1025,27 @@ function JourneyResults({ result }: { result: SimulationResult }) {
             </ul>
           </div>
         </div>
-      </section>
+      </details>
 
-      <section className="conditionCard glassPanel">
+      <details className="conditionCard glassPanel">
+        <summary>Condiciones de éxito</summary>
         <h3>Para que este sueño tenga muchas posibilidades de hacerse realidad</h3>
         <ul>
           {guidance.successConditions.map((item) => (
             <li key={item}>✅ {item}</li>
           ))}
         </ul>
-      </section>
+      </details>
 
-      <section className="avoidCard glassPanel">
+      <details className="avoidCard glassPanel">
+        <summary>Qué evitar</summary>
         <h3>Evitaría hacer esto</h3>
         <ul>
           {guidance.avoidList.map((item) => (
             <li key={item}>❌ {item}</li>
           ))}
         </ul>
-      </section>
+      </details>
 
       <section className="firstStepCard glassPanel">
         <span>Si hoy solo dieras un paso</span>
@@ -760,11 +1065,12 @@ function JourneyResults({ result }: { result: SimulationResult }) {
         </ol>
       </section>
 
-      <article className="sueJourneyLetter glassPanel">
+      <details className="sueJourneyLetter glassPanel">
+        <summary>Carta de Sue</summary>
         <span>Mensaje de tu guía</span>
         <h3>Carta de Sue</h3>
         <p>{result.report}</p>
-      </article>
+      </details>
 
       <details className="advancedJourney glassPanel">
         <summary>Datos técnicos avanzados</summary>
