@@ -1,14 +1,5 @@
-import { spawn } from "node:child_process";
-import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-
-type PythonResponse = {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-};
-
-const PYTHON_TIMEOUT_MS = 180000;
+import { runPythonJourneySimulation } from "../../../lib/platform/simulation-service";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -31,56 +22,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function runPythonSimulation(text: string, model: string, lifeProfile: unknown, simulationId: string): Promise<PythonResponse> {
-  const engineRoot = path.resolve(process.cwd(), "..");
-  const child = spawn("python", ["-m", "brujula_engine.simulation.web_api", "--model", model], {
-    cwd: engineRoot,
-    env: {
-      ...process.env,
-      BRUJULA_OLLAMA_TIMEOUT: process.env.BRUJULA_OLLAMA_TIMEOUT || "60",
-      PYTHONIOENCODING: "utf-8"
-    },
-    stdio: ["pipe", "pipe", "pipe"]
-  });
-
-  let stdout = "";
-  let stderr = "";
-
-  child.stdout.setEncoding("utf-8");
-  child.stderr.setEncoding("utf-8");
-  child.stdout.on("data", (chunk) => {
-    stdout += chunk;
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
-
-  child.stdin.write(JSON.stringify({ simulationId, text, lifeProfile }));
-  child.stdin.end();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new Error("La simulación tardó demasiado. Brújula detuvo el proceso para proteger la UI."));
-    }, PYTHON_TIMEOUT_MS);
-
-    child.on("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-    child.on("close", () => {
-      clearTimeout(timeout);
-      const trimmed = stdout.trim();
-      if (!trimmed) {
-        reject(new Error(stderr.trim() || "Python no devolvió respuesta."));
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(trimmed) as PythonResponse);
-      } catch {
-        reject(new Error(`Respuesta inválida desde Python: ${trimmed.slice(0, 500)}`));
-      }
-    });
-  });
+function runPythonSimulation(text: string, model: string, lifeProfile: unknown, simulationId: string) {
+  return runPythonJourneySimulation({ simulationId, text, model, lifeProfile }).result;
 }
