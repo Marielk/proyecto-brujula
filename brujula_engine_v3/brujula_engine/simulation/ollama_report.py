@@ -105,7 +105,7 @@ LifeSummary:
 {json.dumps(compact_summary, ensure_ascii=False, indent=2)}
 
 Reglas:
-- Máximo 220 palabras.
+- Escribe entre 250 y 330 palabras. Nunca superes 350 palabras.
 - La carta debe sentirse escrita solo para esta persona, este objetivo y esta ruta.
 - No repitas porcentajes.
 - No describas tablas.
@@ -119,7 +119,7 @@ Reglas:
 - Menciona caminos descartados sin humillarlos: explica qué condición tendría que cambiar para que vuelvan a ser buena idea.
 - Explica por qué la ruta elegida protege mejor la vida que la persona desea construir.
 - Menciona una ruta alternativa solo como posibilidad futura, indicando que tendria que cambiar para ganar fuerza.
-- Menciona al menos una decisión o etapa específica de la ruta ganadora.
+- Menciona al menos una decisión, experimento o etapa específica de la ruta ganadora.
 - Explica una compensación concreta de la ruta elegida.
 - Si el escenarioType es dependiente del azar, dilo con honestidad: no hay ruta fiable para provocar el evento, solo exploración de decisiones si ocurriera.
 - No presentes la ruta elegida como destino obligatorio.
@@ -140,14 +140,15 @@ Querida Mariel:
 
 Con cariño,
 Sue"""
-    return client.chat(
+    letter = client.chat(
         [
             {"role": "system", "content": SUE_PROMPT},
             {"role": "user", "content": prompt},
         ],
-        temperature=0.45,
-        num_predict=650,
+        temperature=0.4,
+        num_predict=520,
     )
+    return _limit_letter_words(letter, max_words=360)
 
 
 def generate_comparison_report(client: OllamaClient, scenarios: Iterable) -> str:
@@ -182,6 +183,17 @@ def _state_payload(state) -> dict:
 
 def _money(value) -> str:
     return ("$" + f"{value:,.0f}").replace(",", ".")
+
+
+def _limit_letter_words(text: str, max_words: int = 360) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    closing = "\n\nCon cariño,\nSue"
+    trimmed = " ".join(words[:max_words]).rstrip(" ,;:")
+    if "Con cariño" in trimmed:
+        return trimmed
+    return trimmed + "..." + closing
 
 
 def _messages(prompt: str):

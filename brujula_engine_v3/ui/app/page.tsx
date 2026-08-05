@@ -965,6 +965,7 @@ function JourneyResults({
   const variants = debug?.variants ?? exploredPaths;
   const pruned = debug?.prunedPaths ?? Math.max(0, variants - exploredPaths);
   const finalRoutes = selectedPath ? 1 : 0;
+  const comparisonPaths = uniqueCandidatePaths([selectedPath, ...candidatePaths, ...discardedPaths]).slice(0, 4);
   return (
     <section className={`journeyResults journeyTone-${guidance.conclusion.tone}`}>
       <article className="hybridIntro glassPanel">
@@ -979,7 +980,7 @@ function JourneyResults({
           <div><span>Destino simulado</span><strong>{goal}</strong></div>
           {selectedPath && <div><span>Ruta recomendada</span><strong>{selectedPath.name}</strong></div>}
           <div><span>Estrategias base</span><strong>{baseStrategies}</strong></div>
-          <div><span>Preparación del camino</span><strong>{preparation}%</strong></div>
+          <div><span>Preparación actual</span><strong>{preparation}%</strong><small>Condiciones disponibles hoy para sostener esta ruta.</small></div>
         </div>
         <details className="engineSummary">
           <summary>Cómo se construyó esta recomendación</summary>
@@ -1003,6 +1004,42 @@ function JourneyResults({
         </details>
       </article>
 
+      {comparisonPaths.length > 1 && (
+        <section className="pathComparisonBoard glassPanel">
+          <div className="sectionTitle">
+            <p className="eyebrow">Comparación de caminos</p>
+            <h2>Por qué esta ruta ganó frente a las alternativas</h2>
+          </div>
+          <div className="pathCompareGrid">
+            {comparisonPaths.map((path) => (
+              <article className={path.id === selectedPath?.id ? "recommendedPath" : ""} key={path.id}>
+                <header>
+                  <span>{path.id === selectedPath?.id ? "Recomendada" : strategyLabel(path.strategy)}</span>
+                  <h3>{path.name}</h3>
+                  <strong>{starRating(path.selectionScore)} <em>{Math.round(path.selectionScore)} pts</em></strong>
+                </header>
+                <div className="compareFacts">
+                  <div><span>Tiempo</span><strong>{path.timeEstimate}</strong></div>
+                  <div><span>Riesgo</span><strong>{riskLabel(path.financialRisk)}</strong></div>
+                  <div><span>Energía</span><strong>{energyLabel(path.energyDemand)}</strong></div>
+                  <div><span>Preparación</span><strong>{Math.round(path.preparation)}%</strong></div>
+                </div>
+                <div className="prosCons">
+                  <div>
+                    <span>Gana por</span>
+                    <ul>{pathPros(path).map((item) => <li key={item}>✓ {item}</li>)}</ul>
+                  </div>
+                  <div>
+                    <span>Cuida esto</span>
+                    <ul>{pathCons(path).map((item) => <li key={item}>✕ {item}</li>)}</ul>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       {selectedPath && (
         <section className="pathDecisionCard glassPanel">
           <div className="pathDecisionHeader">
@@ -1011,7 +1048,7 @@ function JourneyResults({
               <h3>{selectedPath.name}</h3>
               <p>{selectedPath.description}</p>
             </div>
-            <strong>{confidenceScore ? `${confidenceScore}%` : `${Math.round(selectedPath.selectionScore)} pts`}</strong>
+            <strong>{confidenceScore ? `${confidenceScore}%` : `${Math.round(selectedPath.selectionScore)} pts`}<small>Confianza comparativa</small></strong>
           </div>
           <div className="pathStats">
             <div><span>Estrategia</span><strong>{strategyLabel(selectedPath.strategy)}</strong></div>
@@ -1062,9 +1099,21 @@ function JourneyResults({
               <article key={path.id}>
                 <div>
                   <strong>{path.name}</strong>
-                  <span>{Math.round(path.selectionScore)} pts</span>
+                  <span>{starRating(path.selectionScore)} {Math.round(path.selectionScore)} pts</span>
                 </div>
                 <p>{path.description}</p>
+                <dl className="alternativeFacts">
+                  <div><dt>Tiempo</dt><dd>{path.timeEstimate}</dd></div>
+                  <div><dt>Riesgo</dt><dd>{riskLabel(path.financialRisk)}</dd></div>
+                  <div><dt>Energía</dt><dd>{energyLabel(path.energyDemand)}</dd></div>
+                  <div><dt>Preparación</dt><dd>{Math.round(path.preparation)}%</dd></div>
+                </dl>
+                <ul className="alternativePros">
+                  {pathPros(path).slice(0, 2).map((item) => <li key={item}>✓ {item}</li>)}
+                </ul>
+                <ul className="alternativeCons">
+                  {pathCons(path).slice(0, 2).map((item) => <li key={item}>✕ {item}</li>)}
+                </ul>
                 <small>{whatWouldImprovePath(path)}</small>
               </article>
             ))}
@@ -1106,10 +1155,10 @@ function JourneyResults({
             )}
           </div>
           <div className="preparationMeter">
-            <span>Preparación del Camino</span>
+            <span>Preparación actual</span>
             <strong>{preparation}%</strong>
             <progress max={100} value={preparation} />
-            <small>{guidance.preparationLabel}</small>
+            <small>Hoy tienes un {preparation}% de las condiciones para sostener esta ruta. {guidance.preparationLabel}</small>
           </div>
         </div>
         <p>{guidance.conclusion.body}</p>
@@ -1360,6 +1409,52 @@ function riskLabel(value: string) {
 
 function energyLabel(value: string) {
   return value === "alta" ? "Alta" : value === "baja" ? "Baja" : "Media";
+}
+
+function uniqueCandidatePaths(paths: Array<CandidatePath | undefined | null>) {
+  const seen = new Set<string>();
+  return paths.filter((path): path is CandidatePath => {
+    if (!path || seen.has(path.id)) {
+      return false;
+    }
+    seen.add(path.id);
+    return true;
+  });
+}
+
+function starRating(score: number) {
+  const filled = Math.max(1, Math.min(5, Math.round(score / 20)));
+  return `${"★".repeat(filled)}${"☆".repeat(5 - filled)}`;
+}
+
+function pathPros(path: CandidatePath) {
+  const details = path.evaluationDetails || {};
+  const items: string[] = [];
+  if ((details.sustainability || 0) >= 65) items.push("mejor sostenibilidad");
+  if ((details.qualityOfLife || 0) >= 65) items.push("mayor bienestar cotidiano");
+  if ((details.serenity || 0) >= 65) items.push("menor tensión emocional");
+  if ((details.resilience || 0) >= 65) items.push("más margen si algo cambia");
+  if ((details.valueCoherence || 0) >= 65) items.push("más coherencia con tus valores");
+  if (path.financialRisk === "bajo") items.push("menos riesgo financiero");
+  if (path.energyDemand === "baja") items.push("menor agotamiento");
+  if (path.reversibility === "alta") items.push("más fácil de ajustar");
+  if (path.domainBenefit?.name) items.push(path.domainBenefit.name.toLowerCase());
+  if (items.length === 0) items.push(strategyLabel(path.strategy).toLowerCase(), "primer paso más verificable");
+  return [...new Set(items)].slice(0, 3);
+}
+
+function pathCons(path: CandidatePath) {
+  const details = path.evaluationDetails || {};
+  const items: string[] = [];
+  if (path.financialRisk === "alto") items.push("alto riesgo financiero");
+  if (path.energyDemand === "alta") items.push("puede exigir demasiada energía");
+  if ((details.sustainability || 100) < 55) items.push("sostenibilidad frágil");
+  if ((details.serenity || 100) < 55) items.push("más estrés durante el proceso");
+  if ((details.regretProtection || 100) < 55) items.push("menos protección ante arrepentimiento");
+  if (path.preparation < 60) items.push("necesita más preparación previa");
+  if (path.tradeoffs?.[0]) items.push(path.tradeoffs[0].toLowerCase());
+  if (items.length === 0) items.push("requiere validar mejor sus supuestos");
+  return [...new Set(items)].slice(0, 3);
 }
 
 function whatWouldImprovePath(path: CandidatePath) {

@@ -495,7 +495,9 @@ def domain_rituals(goal: dict, context: dict) -> list[str]:
 
 
 def _resolve_domain(lower: str) -> str:
-    if any(word in lower for word in ["ux", "product designer", "diseño ux", "diseno ux", "empleo", "ascenso", "ascender", "mejorar renta", "volver al diseño", "volver al diseno", "cambiar de profesión", "cambiar de profesion"]):
+    if any(word in lower for word in ["emprender", "startup", "negocio", "empresa", "emprendimiento", "producto", "saas", "tecnología", "tecnologia", "app", "clientes", "usuarios", "validar", "oferta", "cafetería", "cafeteria", "pasteler", "freelance", "vivir del arte", "brújula", "brujula"]):
+        return "emprendimiento"
+    if any(word in lower for word in ["ux", "product designer", "diseño ux", "diseno ux", "empleo", "ascenso", "ascender", "mejorar renta", "volver al diseño", "volver al diseno", "cambiar de profesión", "cambiar de profesion", "cambiar de carrera", "rol laboral", "postular", "portafolio profesional"]):
         return "carrera"
     if any(word in lower for word in ["loter", "ganar el loto", "ganarme el loto", "sorteo"]):
         return "general"
@@ -507,10 +509,8 @@ def _resolve_domain(lower: str) -> str:
         return "familia"
     if any(word in lower for word in ["estudiar", "universidad", "magíster", "magister", "curso", "certificación", "certificacion", "aprender", "diplomado"]):
         return "educacion"
-    if any(word in lower for word in ["escribir", "novela", "pintar", "música", "musica", "obra", "crear una obra", "ilustrar", "poesía", "poesia"]):
+    if any(word in lower for word in ["escribir", "novela", "pintar", "música", "musica", "obra", "crear una obra", "ilustrar", "poesía", "poesia", "arte"]):
         return "creatividad"
-    if any(word in lower for word in ["emprender", "startup", "negocio", "cafetería", "cafeteria", "pasteler", "arte", "vivir del arte", "freelance", "brújula", "brujula"]):
-        return "emprendimiento"
     return "general"
 
 
@@ -569,6 +569,8 @@ def _housing_type(lower: str) -> str:
 
 
 def _business_type(lower: str) -> str:
+    if any(word in lower for word in ["tecnología", "tecnologia", "app", "saas", "producto", "usuarios"]):
+        return "crear producto tecnológico"
     if "arte" in lower:
         return "vivir del arte"
     if "cafeter" in lower:
