@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { calculateGardenState, defaultCheckIn, gardenMoodLine, recommendRitual } from "../lib/garden";
 import type {
   DailyCheckIn,
@@ -20,7 +21,8 @@ import type {
 const STORAGE_KEY = "brujula.lifeProfile.v0.7";
 const CHECKIN_STORAGE_KEY = "brujula.dailyCheckIn.v0.8";
 const OUTCOME_STORAGE_KEY = "brujula.ritualOutcome.v0.8";
-const JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.14";
+const JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.15";
+const LEGACY_JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.14";
 const EXAMPLE =
   "Quiero simular dedicarme gradualmente a Brújula desde 2028, bajando horas del trabajo actual, haciendo freelance para sostener ingresos y cuidando mi salud física.";
 type Mode = "home" | "garden" | "journey";
@@ -39,6 +41,23 @@ type JourneyFlowState =
   | { status: "loading"; goal: string; simulationId: string; stage: JourneyStage; progress: number; message: string; startedAt: number }
   | { status: "result"; goal: string; simulationId: string; result: SimulationResult; completedAt: string }
   | { status: "error"; goal: string; simulationId?: string; message: string; recoverable: boolean };
+type StoredJourneyResult = Extract<JourneyFlowState, { status: "result" }>;
+type StoredJourneyResults = {
+  latest?: string;
+  items: Record<string, StoredJourneyResult>;
+};
+type SimulationJobSnapshot = {
+  id: string;
+  status: "loading" | "result" | "error" | "cancelled";
+  goal: string;
+  stage: JourneyStage;
+  progress: number;
+  message: string;
+  createdAt: string;
+  completedAt?: string;
+  result?: SimulationResult;
+  error?: string;
+};
 
 const JOURNEY_STAGE_DEFINITIONS: Array<{ id: JourneyStage; label: string; message: string; progress: number }> = [
   { id: "understanding_goal", label: "Comprendiendo tu destino.", message: "Leyendo el destino y detectando el tipo de viaje.", progress: 8 },
@@ -134,18 +153,6 @@ function createSimulationId() {
   return `sim_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function stageFromElapsed(elapsedMs: number) {
-  const elapsedSeconds = elapsedMs / 1000;
-  if (elapsedSeconds < 3) return JOURNEY_STAGE_DEFINITIONS[0];
-  if (elapsedSeconds < 7) return JOURNEY_STAGE_DEFINITIONS[1];
-  if (elapsedSeconds < 13) return JOURNEY_STAGE_DEFINITIONS[2];
-  if (elapsedSeconds < 42) return JOURNEY_STAGE_DEFINITIONS[3];
-  if (elapsedSeconds < 56) return JOURNEY_STAGE_DEFINITIONS[4];
-  if (elapsedSeconds < 72) return JOURNEY_STAGE_DEFINITIONS[5];
-  if (elapsedSeconds < 90) return JOURNEY_STAGE_DEFINITIONS[6];
-  return JOURNEY_STAGE_DEFINITIONS[7];
-}
-
 function formatSimulationDate(value: string) {
   return new Intl.DateTimeFormat("es-CL", {
     dateStyle: "medium",
@@ -153,7 +160,66 @@ function formatSimulationDate(value: string) {
   }).format(new Date(value));
 }
 
+function readStoredJourneyResults(): StoredJourneyResults {
+  const empty: StoredJourneyResults = { items: {} };
+  const raw = window.localStorage.getItem(JOURNEY_RESULTS_STORAGE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as StoredJourneyResults;
+      return { latest: parsed.latest, items: parsed.items || {} };
+    } catch {
+      window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    }
+  }
+
+  const legacy = window.localStorage.getItem(LEGACY_JOURNEY_RESULTS_STORAGE_KEY);
+  if (!legacy) {
+    return empty;
+  }
+  try {
+    const parsed = JSON.parse(legacy) as JourneyFlowState;
+    if (parsed.status !== "result") {
+      return empty;
+    }
+    const migrated = { latest: parsed.simulationId, items: { [parsed.simulationId]: parsed } };
+    window.localStorage.setItem(JOURNEY_RESULTS_STORAGE_KEY, JSON.stringify(migrated));
+    window.localStorage.removeItem(LEGACY_JOURNEY_RESULTS_STORAGE_KEY);
+    return migrated;
+  } catch {
+    window.localStorage.removeItem(LEGACY_JOURNEY_RESULTS_STORAGE_KEY);
+    return empty;
+  }
+}
+
+function writeStoredJourneyResult(resultFlow: StoredJourneyResult) {
+  const stored = readStoredJourneyResults();
+  stored.latest = resultFlow.simulationId;
+  stored.items[resultFlow.simulationId] = resultFlow;
+  window.localStorage.setItem(JOURNEY_RESULTS_STORAGE_KEY, JSON.stringify(stored));
+}
+
+function removeStoredJourneyResult(simulationId?: string) {
+  const stored = readStoredJourneyResults();
+  if (simulationId) {
+    delete stored.items[simulationId];
+    if (stored.latest === simulationId) {
+      stored.latest = Object.keys(stored.items).at(-1);
+    }
+  } else {
+    stored.latest = undefined;
+    stored.items = {};
+  }
+  window.localStorage.setItem(JOURNEY_RESULTS_STORAGE_KEY, JSON.stringify(stored));
+}
+
+function simulationIdFromPath(pathname: string | null) {
+  const match = pathname?.match(/^\/viaje\/resultado\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<LifeProfile>(emptyProfile);
   const [hasProfile, setHasProfile] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -205,21 +271,49 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const savedResults = window.localStorage.getItem(JOURNEY_RESULTS_STORAGE_KEY);
-    if (!savedResults) {
+    const isJourneyRoute = pathname?.startsWith("/viaje");
+    if (!isJourneyRoute) {
       return;
     }
-    try {
-      const parsed = JSON.parse(savedResults) as JourneyFlowState;
-      if (parsed.status === "result") {
-        setJourneyFlow(parsed);
-        setText(parsed.goal);
-        setResult(parsed.result);
-      }
-    } catch {
-      window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    setMode("journey");
+    if (pathname === "/viaje" || pathname === "/viaje/") {
+      setJourneyFlow((current) => (current.status === "loading" ? current : { status: "input", goal: current.goal }));
+      return;
     }
-  }, []);
+    if (pathname === "/viaje/explorando") {
+      setJourneyFlow((current) => {
+        if (current.status === "loading") {
+          return current;
+        }
+        return {
+          status: "error",
+          goal: current.goal,
+          message: "No hay una simulación activa en este navegador.",
+          recoverable: true
+        };
+      });
+      return;
+    }
+    const simulationId = simulationIdFromPath(pathname);
+    if (!simulationId) {
+      return;
+    }
+    const stored = readStoredJourneyResults();
+    const saved = stored.items[simulationId];
+    if (saved) {
+      setJourneyFlow(saved);
+      setText(saved.goal);
+      setResult(saved.result);
+      return;
+    }
+    setJourneyFlow({
+      status: "error",
+      goal: text,
+      simulationId,
+      message: "No encontré este resultado guardado en este navegador.",
+      recoverable: true
+    });
+  }, [pathname]);
 
   useEffect(() => {
     if (journeyFlow.status !== "loading") {
@@ -227,21 +321,16 @@ export default function Home() {
     }
 
     const interval = window.setInterval(() => {
-      setJourneyFlow((current) => {
-        if (current.status !== "loading" || current.simulationId !== journeyFlow.simulationId) {
-          return current;
+      void pollJourneyStatus(journeyFlow.simulationId).catch((err) => {
+        if (activeSimulationRef.current !== journeyFlow.simulationId) {
+          return;
         }
-        const elapsed = Date.now() - current.startedAt;
-        const nextDefinition = stageFromElapsed(elapsed);
-        const progress = Math.max(current.progress, Math.min(nextDefinition.progress, 99));
-        return {
-          ...current,
-          stage: nextDefinition.id,
-          progress,
-          message: nextDefinition.message
-        };
+        const message = err instanceof Error ? err.message : "No se pudo consultar el avance de la simulación.";
+        setError(message);
+        setIsLoading(false);
+        setJourneyFlow({ status: "error", goal: journeyFlow.goal, simulationId: journeyFlow.simulationId, message, recoverable: true });
       });
-    }, 1400);
+    }, 1200);
 
     return () => window.clearInterval(interval);
   }, [journeyFlow]);
@@ -265,6 +354,7 @@ export default function Home() {
     setResult(null);
     setJourneyFlow({ status: "input", goal: text });
     setMode("home");
+    router.push("/");
   }
 
   function update(section: keyof LifeProfile, key: string, value: unknown) {
@@ -298,7 +388,7 @@ export default function Home() {
     setIsLoading(true);
     setError("");
     setResult(null);
-    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    removeStoredJourneyResult(simulationId);
     setJourneyFlow({
       status: "loading",
       goal,
@@ -308,12 +398,13 @@ export default function Home() {
       message: "Leyendo el destino y preparando la simulación.",
       startedAt: Date.now()
     });
+    router.push("/viaje/explorando");
 
     try {
-      const response = await fetch("/api/simulate", {
+      const response = await fetch("/api/simulations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: goal, model, lifeProfile: profile }),
+        body: JSON.stringify({ simulationId, text: goal, model, lifeProfile: profile }),
         signal: abortController.signal
       });
       const payload = await response.json();
@@ -321,30 +412,66 @@ export default function Home() {
         return;
       }
       if (!payload.success) {
-        throw new Error(payload.error || "No se pudo simular el escenario.");
+        throw new Error(payload.error || "No se pudo iniciar la simulación.");
       }
-      setResult(payload.data);
-      const completedFlow: JourneyFlowState = {
-        status: "result",
-        goal,
-        simulationId,
-        result: payload.data,
-        completedAt: new Date().toISOString()
-      };
-      setJourneyFlow(completedFlow);
-      window.localStorage.setItem(JOURNEY_RESULTS_STORAGE_KEY, JSON.stringify(completedFlow));
+      await pollJourneyStatus(simulationId);
     } catch (err) {
       if (activeSimulationRef.current !== simulationId || abortController.signal.aborted) {
         return;
       }
       const message = err instanceof Error ? err.message : "Error desconocido.";
       setError(message);
+      setIsLoading(false);
       setJourneyFlow({ status: "error", goal, simulationId, message, recoverable: true });
-    } finally {
-      if (activeSimulationRef.current === simulationId) {
-        setIsLoading(false);
-      }
     }
+  }
+
+  async function pollJourneyStatus(simulationId: string) {
+    const response = await fetch(`/api/simulations/${encodeURIComponent(simulationId)}/status`, { cache: "no-store" });
+    const payload = await response.json();
+    if (activeSimulationRef.current !== simulationId) {
+      return;
+    }
+    if (!payload.success) {
+      throw new Error(payload.error || "No se pudo consultar el estado de la simulación.");
+    }
+    const job = payload.data as SimulationJobSnapshot;
+    if (job.status === "loading") {
+      setJourneyFlow((current) => {
+        if (current.status !== "loading" || current.simulationId !== simulationId) {
+          return current;
+        }
+        return {
+          ...current,
+          stage: job.stage,
+          progress: Math.max(current.progress, job.progress),
+          message: job.message
+        };
+      });
+      return;
+    }
+    if (job.status === "result" && job.result) {
+      const completedFlow: StoredJourneyResult = {
+        status: "result",
+        goal: job.goal,
+        simulationId,
+        result: job.result,
+        completedAt: job.completedAt || new Date().toISOString()
+      };
+      setResult(job.result);
+      setJourneyFlow(completedFlow);
+      writeStoredJourneyResult(completedFlow);
+      setIsLoading(false);
+      router.push(`/viaje/resultado/${encodeURIComponent(simulationId)}`);
+      return;
+    }
+    if (job.status === "cancelled") {
+      setIsLoading(false);
+      setJourneyFlow({ status: "input", goal: job.goal });
+      router.push("/viaje");
+      return;
+    }
+    throw new Error(job.error || job.message || "No se pudo completar la simulación.");
   }
 
   async function retryJourney() {
@@ -355,23 +482,30 @@ export default function Home() {
 
   function cancelJourney() {
     simulationAbortRef.current?.abort();
+    if (activeSimulationRef.current) {
+      void fetch(`/api/simulations/${encodeURIComponent(activeSimulationRef.current)}/status`, { method: "DELETE" });
+    }
     activeSimulationRef.current = "";
     setIsLoading(false);
     setResult(null);
     setError("");
     setJourneyFlow((current) => ({ status: "input", goal: current.goal }));
+    router.push("/viaje");
   }
 
   function editJourneyGoal() {
     setIsLoading(false);
     setResult(null);
     setError("");
-    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    if (journeyFlow.status === "result") {
+      removeStoredJourneyResult(journeyFlow.simulationId);
+    }
     setJourneyFlow((current) => {
       const goal = current.status === "input" ? current.goal : current.goal;
       setText(goal);
       return { status: "input", goal };
     });
+    router.push("/viaje");
   }
 
   function newJourney() {
@@ -381,8 +515,9 @@ export default function Home() {
     setResult(null);
     setError("");
     setIsLoading(false);
-    window.localStorage.removeItem(JOURNEY_RESULTS_STORAGE_KEY);
+    removeStoredJourneyResult();
     setJourneyFlow({ status: "input", goal: "" });
+    router.push("/viaje");
   }
 
   const showProfileForm = isEditingProfile || !hasProfile;
@@ -409,6 +544,15 @@ export default function Home() {
     window.localStorage.setItem(OUTCOME_STORAGE_KEY, JSON.stringify(next));
   }
 
+  function navigateMode(nextMode: Mode) {
+    setMode(nextMode);
+    if (nextMode === "journey") {
+      router.push("/viaje");
+      return;
+    }
+    router.push("/");
+  }
+
   return (
     <main className={showProfileForm ? "shell profileCanvas" : "appCanvas"}>
       {showProfileForm ? (
@@ -424,8 +568,8 @@ export default function Home() {
         />
       ) : (
         <>
-          <AppNav mode={mode} onMode={setMode} onEditProfile={() => setIsEditingProfile(true)} />
-          {mode === "home" && <ModeLanding profile={profile} onMode={setMode} />}
+          <AppNav mode={mode} onMode={navigateMode} onEditProfile={() => setIsEditingProfile(true)} />
+          {mode === "home" && <ModeLanding profile={profile} onMode={navigateMode} />}
           {mode === "garden" && (
             <GardenMode
               checkIn={checkIn}
@@ -833,27 +977,30 @@ function JourneyResults({
         </div>
         <div className="resultMetaGrid">
           <div><span>Destino simulado</span><strong>{goal}</strong></div>
-          {guidance.goal && <div><span>Dominio detectado</span><strong>{domainLabel(guidance.goal.domain)}</strong></div>}
-          {scenarioType && <div><span>Tipo de escenario</span><strong>{scenarioType}</strong></div>}
           {selectedPath && <div><span>Ruta recomendada</span><strong>{selectedPath.name}</strong></div>}
-          <div><span>Preparación</span><strong>{preparation}%</strong></div>
-          <div><span>Fecha</span><strong>{formatSimulationDate(completedAt)}</strong></div>
           <div><span>Estrategias base</span><strong>{baseStrategies}</strong></div>
-          <div><span>Variantes evaluadas</span><strong>{variants}</strong></div>
-          <div><span>Rutas descartadas</span><strong>{pruned}</strong></div>
-          <div><span>Familias de caminos</span><strong>{clusters.length}</strong></div>
-          <div><span>Rutas finalistas</span><strong>{Math.max(finalRoutes, candidatePaths.length ? Math.min(3, candidatePaths.length) : 0)}</strong></div>
-          <div><span>ID simulación</span><strong>{simulationId}</strong></div>
+          <div><span>Preparación del camino</span><strong>{preparation}%</strong></div>
         </div>
-        <div className="hybridStatus">
-          {guidance.goal && <span className="okPill">Dominio: {domainLabel(guidance.goal.domain)}</span>}
-          {scenarioType && <span className={guidance.goal?.controllability === "low" ? "fallbackPill" : "okPill"}>Escenario: {scenarioType}</span>}
-          {selectedPath?.domainPolicy && <span className="okPill">Modelo especializado: {selectedPath.domainPolicy}</span>}
-          <span className={result.llm.goal ? "okPill" : "fallbackPill"}>Intérprete: {result.llm.goal ? "Ollama" : "Local"}</span>
-          <span className={result.llm.paths ? "okPill" : "fallbackPill"}>Caminos: {result.llm.paths ? "Ollama" : "Locales"}</span>
-          <span className={result.llm.comparison ? "okPill" : "fallbackPill"}>Comparación: {result.llm.comparison ? "Ollama" : "Local"}</span>
-          <span className={result.llm.report ? "okPill" : "fallbackPill"}>Sue: {result.llm.report ? "Ollama" : "Determinista"}</span>
-        </div>
+        <details className="engineSummary">
+          <summary>Cómo se construyó esta recomendación</summary>
+          <div className="resultMetaGrid">
+            {guidance.goal && <div><span>Dominio detectado</span><strong>{domainLabel(guidance.goal.domain)}</strong></div>}
+            {scenarioType && <div><span>Tipo de escenario</span><strong>{scenarioType}</strong></div>}
+            <div><span>Fecha</span><strong>{formatSimulationDate(completedAt)}</strong></div>
+            <div><span>Variantes evaluadas</span><strong>{variants}</strong></div>
+            <div><span>Rutas descartadas</span><strong>{pruned}</strong></div>
+            <div><span>Familias de caminos</span><strong>{clusters.length}</strong></div>
+            <div><span>Rutas finalistas</span><strong>{Math.max(finalRoutes, candidatePaths.length ? Math.min(3, candidatePaths.length) : 0)}</strong></div>
+            <div><span>ID simulación</span><strong>{simulationId}</strong></div>
+          </div>
+          <div className="hybridStatus">
+            {selectedPath?.domainPolicy && <span className="okPill">Modelo especializado: {selectedPath.domainPolicy}</span>}
+            <span className={result.llm.goal ? "okPill" : "fallbackPill"}>Intérprete: {result.llm.goal ? "Ollama" : "Local"}</span>
+            <span className={result.llm.paths ? "okPill" : "fallbackPill"}>Caminos: {result.llm.paths ? "Ollama" : "Locales"}</span>
+            <span className={result.llm.comparison ? "okPill" : "fallbackPill"}>Comparación: {result.llm.comparison ? "Ollama" : "Local"}</span>
+            <span className={result.llm.report ? "okPill" : "fallbackPill"}>Sue: {result.llm.report ? "Ollama" : "Determinista"}</span>
+          </div>
+        </details>
       </article>
 
       {selectedPath && (

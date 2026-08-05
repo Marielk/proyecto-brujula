@@ -2826,6 +2826,7 @@ tr:last-child td {
 
 .technicalMode summary,
 .advancedJourney summary,
+.engineSummary summary,
 .pathAlternatives summary,
 .clusterGarden summary,
 .domainMetricsCard summary,
@@ -2943,6 +2944,16 @@ tr:last-child td {
   overflow-wrap: anywhere;
 }
 
+.engineSummary {
+  border-top: 1px solid rgba(75, 101, 71, 0.12);
+  margin-top: 22px;
+  padding-top: 18px;
+}
+
+.engineSummary .resultMetaGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .journeyErrorState {
   display: grid;
   gap: 18px;
@@ -2968,7 +2979,8 @@ tr:last-child td {
 }
 
 @media (max-width: 900px) {
-  .resultMetaGrid {
+  .resultMetaGrid,
+  .engineSummary .resultMetaGrid {
     grid-template-columns: 1fr;
   }
 }

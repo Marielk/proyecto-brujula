@@ -26,6 +26,19 @@ from brujula_engine.simulation.life_profile import base_state_from_profile, prof
 from brujula_engine.simulation.ollama_report import generate_sue_letter
 
 
+def emit_progress(stage: str, progress: int, message: str, metadata: dict | None = None) -> None:
+    if os.getenv("BRUJULA_PROGRESS_EVENTS") != "1":
+        return
+    event = {
+        "type": "progress",
+        "stage": stage,
+        "progress": progress,
+        "message": message,
+        "metadata": metadata or {},
+    }
+    print(json.dumps(event, ensure_ascii=True), file=sys.stderr, flush=True)
+
+
 def money(value) -> str:
     return ("$" + f"{value:,.0f}").replace(",", ".")
 
@@ -50,7 +63,7 @@ def state_to_dict(state) -> dict:
     }
 
 
-def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dict | None = None) -> dict:
+def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dict | None = None, simulation_id: str | None = None) -> dict:
     warnings = profile_warnings(life_profile)
     ollama_timeout = int(os.getenv("BRUJULA_OLLAMA_TIMEOUT", "20"))
     client = OllamaClient(base_url=ollama_url, model=model, timeout=ollama_timeout)
@@ -59,6 +72,7 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     used_ollama_for_comparison = True
     used_ollama_for_report = True
     base_state = base_state_from_profile(life_profile)
+    emit_progress("understanding_goal", 6, "Comprendiendo tu destino y preparando el interprete.")
     try:
         client.ensure_model_available()
         goal, used_ollama_for_goal, goal_error = interpret_goal_with_ai(client, text, life_profile)
@@ -74,19 +88,29 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         warnings.append(goal_error)
     if goal.get("unsupportedWarning"):
         warnings.append(goal["unsupportedWarning"])
+    emit_progress(
+        "selecting_context",
+        16,
+        "Relacionando el destino con tu Perfil de Vida.",
+        {"domain": goal["spec"].get("domain"), "controllability": goal["spec"].get("controllability")},
+    )
     context_selection = select_goal_context(life_profile, goal["spec"]["domain"])
 
+    emit_progress("generating_strategies", 26, "Creando estrategias base para este destino.")
     base_paths, used_ollama_for_paths, path_error = generate_candidate_paths_with_ai(client, text, goal, life_profile)
     if path_error:
         warnings.append("Ollama no pudo generar todos los caminos alternativos. Brújula usó rutas locales del dominio.")
         warnings.append(path_error)
 
+    emit_progress("expanding_paths", 42, "Simulando variantes de cada camino.", {"baseStrategies": len(base_paths), "targetVariants": 90})
     expanded_paths = expand_candidate_paths(base_paths, goal, target=90)
+    emit_progress("pruning_paths", 72, "Descartando rutas frágiles o repetidas.", {"variantsGenerated": len(expanded_paths)})
     paths, pruned_paths = prune_candidate_paths(expanded_paths)
     if len(paths) < 3:
         paths = expanded_paths[:12]
 
     evaluated = []
+    emit_progress("comparing_paths", 80, "Ejecutando escenarios y comparando senderos finalistas.", {"pathsToEvaluate": len(paths)})
     for path in paths:
         scenario = scenario_from_candidate_path(path, base_state, goal)
         states = run_scenario(scenario, life_profile)
@@ -136,11 +160,18 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
         qualitative=qualitative,
         decision_events=decision_timeline(selected_eval, states),
     )
+    emit_progress(
+        "building_result",
+        94,
+        "Preparando una explicacion clara de la ruta recomendada.",
+        {"variantsGenerated": len(expanded_paths), "prunedPaths": len(pruned_paths), "clusters": len(clusters)},
+    )
 
     visible_candidates = top_public
     life_report["journeyGuidance"]["candidatePaths"] = visible_candidates
     life_report["lifeSummary"]["candidatePaths"] = visible_candidates
 
+    emit_progress("writing_letter", 98, "Sue esta resumiendo lo mas importante del recorrido.")
     try:
         report = generate_sue_letter(client, life_report["lifeSummary"])
     except Exception as exc:
@@ -174,8 +205,10 @@ def simulate_from_text(text: str, model: str, ollama_url: str, life_profile: dic
     )
     life_report["journeyGuidance"]["debug"] = debug
     life_report["lifeSummary"]["debug"] = debug
+    emit_progress("completed", 100, "La ruta esta lista.", {"selectedPath": _public_candidate(selected_eval).get("id")})
 
     return {
+        "simulationId": simulation_id,
         "scenario": {
             "name": scenario.name,
             "description": scenario.description,
@@ -286,7 +319,13 @@ def main(argv: List[str] | None = None) -> int:
 
     try:
         request = json.loads(sys.stdin.read() or "{}")
-        result = simulate_from_text(request.get("text", ""), args.model, args.ollama_url, request.get("lifeProfile"))
+        result = simulate_from_text(
+            request.get("text", ""),
+            args.model,
+            args.ollama_url,
+            request.get("lifeProfile"),
+            request.get("simulationId"),
+        )
         print(json.dumps({"success": True, "data": result}, ensure_ascii=True))
         return 0
     except Exception as exc:
