@@ -8,7 +8,7 @@ export const ollamaPythonProvider: AIProvider = {
   id: "ollama-python",
   kind: "ollama",
   runJourneySimulation(request, onProgress) {
-    return runPythonJourneySimulation(request, onProgress);
+    return runPythonJourneySimulation(request, onProgress, { progressEvents: true });
   }
 };
 

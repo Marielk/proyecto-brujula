@@ -60,6 +60,24 @@ export function useJourney() {
       return;
     }
     if (pathname === "/viaje/explorando") {
+      const activeSimulationId = storage.readActiveJourneyId();
+      if (activeSimulationId) {
+        activeSimulationRef.current = activeSimulationId;
+        void pollJourneyStatus(activeSimulationId).catch(() => {
+          setJourneyFlow((current) =>
+            current.status === "loading"
+              ? current
+              : {
+                  status: "error",
+                  goal: current.goal,
+                  simulationId: activeSimulationId,
+                  message: "No hay una simulacion activa en este navegador.",
+                  recoverable: true
+                }
+          );
+        });
+        return;
+      }
       setJourneyFlow((current) =>
         current.status === "loading"
           ? current
@@ -98,7 +116,17 @@ export function useJourney() {
 
     if (job.status === "loading") {
       setJourneyFlow((current) => {
-        if (current.status !== "loading" || current.simulationId !== simulationId) return current;
+        if (current.status !== "loading" || current.simulationId !== simulationId) {
+          return {
+            status: "loading",
+            goal: job.goal,
+            simulationId,
+            stage: job.stage,
+            progress: job.progress,
+            message: job.message,
+            startedAt: Date.parse(job.createdAt) || Date.now()
+          };
+        }
         return { ...current, stage: job.stage, progress: Math.max(current.progress, job.progress), message: job.message };
       });
       return;
@@ -115,6 +143,7 @@ export function useJourney() {
       setResult(job.result);
       setJourneyFlow(completedFlow);
       storage.writeStoredJourneyResult(completedFlow);
+      storage.removeActiveJourneyId();
       setIsLoading(false);
       router.push(`/viaje/resultado/${encodeURIComponent(simulationId)}`);
       return;
@@ -122,6 +151,7 @@ export function useJourney() {
 
     if (job.status === "cancelled") {
       setIsLoading(false);
+      storage.removeActiveJourneyId();
       setJourneyFlow({ status: "input", goal: job.goal });
       router.push("/viaje");
       return;
@@ -194,6 +224,7 @@ export function useJourney() {
     const abortController = new AbortController();
     activeSimulationRef.current = simulationId;
     simulationAbortRef.current = abortController;
+    storage.writeActiveJourneyId(simulationId);
     setIsLoading(true);
     setError("");
     setResult(null);
@@ -233,7 +264,9 @@ export function useJourney() {
       void simulation.cancel(activeSimulationRef.current);
     }
     activeSimulationRef.current = "";
+    storage.removeActiveJourneyId();
     setIsLoading(false);
+    storage.removeActiveJourneyId();
     setResult(null);
     setError("");
     setJourneyFlow((current) => ({ status: "input", goal: current.goal }));
@@ -257,6 +290,7 @@ export function useJourney() {
   function newJourney() {
     simulationAbortRef.current?.abort();
     activeSimulationRef.current = "";
+    storage.removeActiveJourneyId();
     setText("");
     setResult(null);
     setError("");

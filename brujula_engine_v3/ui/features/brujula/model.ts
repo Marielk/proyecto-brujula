@@ -5,6 +5,7 @@ export const CHECKIN_STORAGE_KEY = "brujula.dailyCheckIn.v0.8";
 export const OUTCOME_STORAGE_KEY = "brujula.ritualOutcome.v0.8";
 export const JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.15";
 export const LEGACY_JOURNEY_RESULTS_STORAGE_KEY = "brujula.journeyResults.v0.14";
+export const ACTIVE_JOURNEY_STORAGE_KEY = "brujula.activeJourney.v0.15";
 export const EXAMPLE =
   "Quiero simular dedicarme gradualmente a Brújula desde 2028, bajando horas del trabajo actual, haciendo freelance para sostener ingresos y cuidando mi salud física.";
 export type Mode = "home" | "garden" | "journey";

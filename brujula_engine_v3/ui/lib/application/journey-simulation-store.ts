@@ -2,6 +2,7 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { JourneyProviderResult, JourneyStage, PublicSimulationJob } from "../platform/contracts";
 import { getJourneyProvider } from "../platform/ai-provider-registry";
 import { publishPlatformEvent } from "../platform/telemetry";
+import { isSimulationResultContract, simulationResultContractError } from "./journey-result-contract";
 
 type SimulationJob = PublicSimulationJob & {
   child?: ChildProcessWithoutNullStreams;
@@ -89,6 +90,10 @@ function completeJob(job: SimulationJob, parsed: JourneyProviderResult) {
   }
   if (!parsed.success) {
     failJob(job, parsed.error || "No se pudo simular el escenario.");
+    return;
+  }
+  if (!isSimulationResultContract(parsed.data)) {
+    failJob(job, simulationResultContractError(parsed.data));
     return;
   }
   job.status = "result";

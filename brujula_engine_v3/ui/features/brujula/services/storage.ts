@@ -1,6 +1,7 @@
 import { defaultCheckIn } from "../../../lib/garden";
 import type { DailyCheckIn, LifeProfile, RitualOutcome } from "../../../lib/types";
 import {
+  ACTIVE_JOURNEY_STORAGE_KEY,
   CHECKIN_STORAGE_KEY,
   JOURNEY_RESULTS_STORAGE_KEY,
   LEGACY_JOURNEY_RESULTS_STORAGE_KEY,
@@ -66,6 +67,18 @@ export function readRitualOutcome(): RitualOutcome | null {
 
 export function writeRitualOutcome(outcome: RitualOutcome) {
   safeLocalStorage()?.setItem(OUTCOME_STORAGE_KEY, JSON.stringify(outcome));
+}
+
+export function readActiveJourneyId() {
+  return safeLocalStorage()?.getItem(ACTIVE_JOURNEY_STORAGE_KEY) || "";
+}
+
+export function writeActiveJourneyId(simulationId: string) {
+  safeLocalStorage()?.setItem(ACTIVE_JOURNEY_STORAGE_KEY, simulationId);
+}
+
+export function removeActiveJourneyId() {
+  safeLocalStorage()?.removeItem(ACTIVE_JOURNEY_STORAGE_KEY);
 }
 
 export function readStoredJourneyResults(): StoredJourneyResults {
