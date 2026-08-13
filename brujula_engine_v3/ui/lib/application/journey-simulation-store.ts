@@ -31,8 +31,13 @@ export async function startSimulationJob({
   lifeProfile: unknown;
 }) {
   const existing = jobs.get(simulationId);
-  if (existing?.child) {
-    existing.child.kill("SIGKILL");
+  if (existing) {
+    existing.child?.kill("SIGKILL");
+    stopHeartbeat(existing);
+    existing.status = "cancelled";
+    existing.message = "Simulacion reemplazada por una nueva solicitud.";
+    existing.completedAt = new Date().toISOString();
+    await persistJob(existing);
   }
 
   const provider = getJourneyProvider();
@@ -101,18 +106,28 @@ export async function cancelSimulationJob(simulationId: string) {
     if (!storedJob) {
       return null;
     }
-    const cancelledJob: PublicSimulationJob = { ...storedJob, status: "cancelled", message: "Simulacion cancelada.", completedAt: new Date().toISOString() };
+    if (storedJob.status === "loading" && hasFreshHeartbeat(storedJob)) {
+      const requestedJob: PublicSimulationJob = {
+        ...storedJob,
+        cancellationRequestedAt: new Date().toISOString(),
+        message: "Cancelacion solicitada. Esperando confirmacion del proceso propietario."
+      };
+      await fileStorageProvider.set(jobStorageKey(simulationId), requestedJob);
+      publishPlatformEvent("JourneyCancelled", { simulationId });
+      return requestedJob;
+    }
+    const cancelledJob: PublicSimulationJob = {
+      ...storedJob,
+      status: "cancelled",
+      message: "Simulacion cancelada.",
+      cancellationRequestedAt: storedJob.cancellationRequestedAt || new Date().toISOString(),
+      completedAt: new Date().toISOString()
+    };
     await fileStorageProvider.set(jobStorageKey(simulationId), cancelledJob);
     publishPlatformEvent("JourneyCancelled", { simulationId });
     return cancelledJob;
   }
-  job.child?.kill("SIGKILL");
-  stopHeartbeat(job);
-  job.child = undefined;
-  job.status = "cancelled";
-  job.message = "Simulacion cancelada.";
-  await persistJob(job);
-  publishPlatformEvent("JourneyCancelled", { simulationId });
+  await cancelOwnedJob(job);
   return publicJob(job);
 }
 
@@ -132,15 +147,14 @@ function applyProgressEvent(job: SimulationJob, event: { stage?: JourneyStage; p
   if (!event.stage) {
     return;
   }
-  job.stage = event.stage;
-  job.progress = Math.max(job.progress, Math.min(event.progress ?? job.progress, 100));
-  job.message = event.message || job.message;
-  job.heartbeatAt = new Date().toISOString();
-  void persistJob(job);
+  void applyProgressEventAsync(job, { stage: event.stage, progress: event.progress, message: event.message });
 }
 
 async function completeJob(job: SimulationJob, parsed: JourneyProviderResult) {
   if (job.status === "cancelled" || job.status === "error") {
+    return;
+  }
+  if (await honorCancellationRequest(job)) {
     return;
   }
   if (!parsed.success) {
@@ -205,13 +219,57 @@ function jobStorageKey(simulationId: string) {
 function startHeartbeat(job: SimulationJob) {
   stopHeartbeat(job);
   job.heartbeat = setInterval(() => {
-    if (job.status !== "loading") {
-      stopHeartbeat(job);
-      return;
-    }
-    job.heartbeatAt = new Date().toISOString();
-    void persistJob(job);
+    void heartbeatJob(job);
   }, HEARTBEAT_INTERVAL_MS);
+}
+
+async function heartbeatJob(job: SimulationJob) {
+  if (job.status !== "loading") {
+    stopHeartbeat(job);
+    return;
+  }
+  if (await honorCancellationRequest(job)) {
+    return;
+  }
+  job.heartbeatAt = new Date().toISOString();
+  await persistJob(job);
+}
+
+async function applyProgressEventAsync(job: SimulationJob, event: { stage: JourneyStage; progress?: number; message?: string }) {
+  if (job.status !== "loading" || (await honorCancellationRequest(job))) {
+    return;
+  }
+  job.stage = event.stage;
+  job.progress = Math.max(job.progress, Math.min(event.progress ?? job.progress, 100));
+  job.message = event.message || job.message;
+  job.heartbeatAt = new Date().toISOString();
+  await persistJob(job);
+}
+
+async function honorCancellationRequest(job: SimulationJob) {
+  const storedJob = await fileStorageProvider.get<PublicSimulationJob>(jobStorageKey(job.id));
+  if (!storedJob?.cancellationRequestedAt || job.status !== "loading") {
+    return false;
+  }
+  await cancelOwnedJob(job, storedJob.cancellationRequestedAt);
+  return true;
+}
+
+async function cancelOwnedJob(job: SimulationJob, cancellationRequestedAt = new Date().toISOString()) {
+  job.child?.kill("SIGKILL");
+  stopHeartbeat(job);
+  const cancelledJob: SimulationJob = {
+    ...job,
+    status: "cancelled",
+    message: "Simulacion cancelada.",
+    cancellationRequestedAt,
+    completedAt: new Date().toISOString(),
+    heartbeat: undefined,
+    child: undefined
+  };
+  await persistJob(cancelledJob);
+  Object.assign(job, cancelledJob);
+  publishPlatformEvent("JourneyCancelled", { simulationId: job.id });
 }
 
 function stopHeartbeat(job: SimulationJob) {

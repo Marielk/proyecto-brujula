@@ -22,9 +22,17 @@ afterEach(async () => {
   resetJourneyProvider();
   clearSimulationJobsForTests();
   await Promise.all(
-    ["sim_test", "sim_invalid", "sim_cancel", "sim_persisted", "sim_interrupted", "sim_fresh", "sim_throw"].map((id) =>
-      removeSimulationJobForTests(id)
-    )
+    [
+      "sim_test",
+      "sim_invalid",
+      "sim_cancel",
+      "sim_persisted",
+      "sim_interrupted",
+      "sim_fresh",
+      "sim_throw",
+      "sim_remote_cancel",
+      "sim_reused"
+    ].map((id) => removeSimulationJobForTests(id))
   );
 });
 
@@ -45,8 +53,8 @@ describe("journey simulation store", () => {
     const started = await startSimulationJob({ simulationId: "sim_test", text: "Quiero cambiar de ruta", model: "local", lifeProfile: null });
 
     expect(started.status).toBe("loading");
-    expect(started.stage).toBe("generating_strategies");
-    await expect(getSimulationJob("sim_test")).resolves.toMatchObject({ progress: 35 });
+    expect(started.stage).toBe("understanding_goal");
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_test"))?.progress).toBe(35));
 
     result.resolve({ success: true, data: validResult });
     await vi.waitFor(async () => expect((await getSimulationJob("sim_test"))?.status).toBe("result"));
@@ -102,6 +110,84 @@ describe("journey simulation store", () => {
     });
 
     await expect(getSimulationJob("sim_fresh")).resolves.toMatchObject({ status: "loading", progress: 90 });
+  });
+
+  it("requests remote cancellation without overwriting a fresh owner heartbeat", async () => {
+    await fileStorageProvider.set("journey-simulation:sim_fresh", {
+      id: "sim_fresh",
+      status: "loading",
+      goal: "Destino",
+      stage: "comparing_paths",
+      progress: 90,
+      message: "Comparando",
+      createdAt: new Date().toISOString(),
+      ownerId: "other-instance",
+      heartbeatAt: new Date().toISOString()
+    });
+
+    await expect(cancelSimulationJob("sim_fresh")).resolves.toMatchObject({
+      status: "loading",
+      cancellationRequestedAt: expect.any(String)
+    });
+  });
+
+  it("lets the owner honor a remote cancellation request before writing more progress", async () => {
+    const kill = vi.fn();
+    let progress:
+      | ((event: { type: "progress"; stage: "comparing_paths"; progress: number; message: string }) => void)
+      | undefined;
+    const provider: AIProvider = {
+      id: "remote-cancel-provider",
+      kind: "local",
+      runJourneySimulation: (_request, onProgress) => {
+        progress = onProgress as typeof progress;
+        return { child: { kill }, result: new Promise(() => undefined) };
+      }
+    };
+    setJourneyProvider(provider);
+
+    const started = await startSimulationJob({ simulationId: "sim_remote_cancel", text: "Destino", model: "local", lifeProfile: null });
+    await fileStorageProvider.set("journey-simulation:sim_remote_cancel", {
+      ...started,
+      cancellationRequestedAt: new Date().toISOString()
+    });
+
+    progress?.({ type: "progress", stage: "comparing_paths", progress: 90, message: "No debe persistir" });
+
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_remote_cancel"))?.status).toBe("cancelled"));
+    expect(kill).toHaveBeenCalledWith("SIGKILL");
+    expect(await getSimulationJob("sim_remote_cancel")).toMatchObject({ status: "cancelled", message: "Simulacion cancelada." });
+  });
+
+  it("stops an existing job when the same simulationId is reused", async () => {
+    const oldKill = vi.fn();
+    let oldProgress:
+      | ((event: { type: "progress"; stage: "comparing_paths"; progress: number; message: string }) => void)
+      | undefined;
+    const oldProvider: AIProvider = {
+      id: "old-provider",
+      kind: "local",
+      runJourneySimulation: (_request, onProgress) => {
+        oldProgress = onProgress as typeof oldProgress;
+        return { child: { kill: oldKill }, result: new Promise(() => undefined) };
+      }
+    };
+    setJourneyProvider(oldProvider);
+    await startSimulationJob({ simulationId: "sim_reused", text: "Viejo", model: "local", lifeProfile: null });
+
+    const newResult = createSimulationResult();
+    const newProvider: AIProvider = {
+      id: "new-provider",
+      kind: "local",
+      runJourneySimulation: () => ({ result: Promise.resolve({ success: true, data: newResult }) })
+    };
+    setJourneyProvider(newProvider);
+    await startSimulationJob({ simulationId: "sim_reused", text: "Nuevo", model: "local", lifeProfile: null });
+    oldProgress?.({ type: "progress", stage: "comparing_paths", progress: 99, message: "Viejo progreso" });
+
+    expect(oldKill).toHaveBeenCalledWith("SIGKILL");
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_reused"))?.status).toBe("result"));
+    expect(await getSimulationJob("sim_reused")).toMatchObject({ goal: "Nuevo", result: newResult });
   });
 
   it("turns synchronous provider startup failures into controlled job errors", async () => {

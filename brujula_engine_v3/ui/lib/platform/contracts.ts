@@ -42,6 +42,7 @@ export type PublicSimulationJob = {
   createdAt: string;
   ownerId?: string;
   heartbeatAt?: string;
+  cancellationRequestedAt?: string;
   completedAt?: string;
   result?: unknown;
   error?: string;
