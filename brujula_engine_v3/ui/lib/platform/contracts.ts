@@ -30,6 +30,21 @@ export type JourneyProviderResult = {
   error?: string;
 };
 
+export type JourneySimulationStatus = "loading" | "result" | "error" | "cancelled";
+
+export type PublicSimulationJob = {
+  id: string;
+  status: JourneySimulationStatus;
+  goal: string;
+  stage: JourneyStage;
+  progress: number;
+  message: string;
+  createdAt: string;
+  completedAt?: string;
+  result?: unknown;
+  error?: string;
+};
+
 export type AIProvider = {
   id: string;
   kind: "ollama" | "openai" | "local";
