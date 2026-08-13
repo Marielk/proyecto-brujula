@@ -1,1 +1,5 @@
-export { default } from "../../../../features/brujula/BrujulaApp";
+import BrujulaApp from "../../../../features/brujula/BrujulaApp";
+
+export default function JourneyResultPage() {
+  return <BrujulaApp />;
+}
