@@ -1,6 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { JourneyProviderResult, JourneyStage, PublicSimulationJob } from "../platform/contracts";
 import { getJourneyProvider } from "../platform/ai-provider-registry";
+import { fileStorageProvider } from "../platform/file-storage";
 import { publishPlatformEvent } from "../platform/telemetry";
 import { isSimulationResultContract, simulationResultContractError } from "./journey-result-contract";
 
@@ -14,7 +15,7 @@ type BrujulaSimulationGlobal = typeof globalThis & {
 
 const jobs = ((globalThis as BrujulaSimulationGlobal).__brujulaSimulationJobs ||= new Map<string, SimulationJob>());
 
-export function startSimulationJob({
+export async function startSimulationJob({
   simulationId,
   text,
   model,
@@ -41,6 +42,7 @@ export function startSimulationJob({
     createdAt: new Date().toISOString()
   };
   jobs.set(simulationId, job);
+  await persistJob(job);
   publishPlatformEvent("JourneyStarted", { simulationId, provider: provider.id });
 
   const providerRun = provider.runJourneySimulation({ simulationId, text, model, lifeProfile }, (event) => {
@@ -48,31 +50,63 @@ export function startSimulationJob({
     publishPlatformEvent("JourneyProgressed", { simulationId, stage: event.stage, progress: event.progress });
   });
   job.child = providerRun.child as ChildProcessWithoutNullStreams | undefined;
-  providerRun.result.then((parsed) => completeJob(job, parsed)).catch((error: Error) => failJob(job, error.message));
+  providerRun.result.then((parsed) => void completeJob(job, parsed)).catch((error: Error) => void failJob(job, error.message));
 
   return publicJob(job);
 }
 
-export function getSimulationJob(simulationId: string) {
+export async function getSimulationJob(simulationId: string) {
   const job = jobs.get(simulationId);
-  return job ? publicJob(job) : null;
+  if (job) {
+    return publicJob(job);
+  }
+
+  const storedJob = await fileStorageProvider.get<PublicSimulationJob>(jobStorageKey(simulationId));
+  if (!storedJob) {
+    return null;
+  }
+  if (storedJob.status !== "loading") {
+    return storedJob;
+  }
+  const interruptedJob: PublicSimulationJob = {
+    ...storedJob,
+    status: "error",
+    error: "La simulacion fue interrumpida porque el proceso del servidor ya no esta activo.",
+    message: "La simulacion fue interrumpida porque el proceso del servidor ya no esta activo.",
+    completedAt: new Date().toISOString()
+  };
+  await fileStorageProvider.set(jobStorageKey(simulationId), interruptedJob);
+  return interruptedJob;
 }
 
-export function cancelSimulationJob(simulationId: string) {
+export async function cancelSimulationJob(simulationId: string) {
   const job = jobs.get(simulationId);
   if (!job) {
-    return null;
+    const storedJob = await fileStorageProvider.get<PublicSimulationJob>(jobStorageKey(simulationId));
+    if (!storedJob) {
+      return null;
+    }
+    const cancelledJob: PublicSimulationJob = { ...storedJob, status: "cancelled", message: "Simulacion cancelada.", completedAt: new Date().toISOString() };
+    await fileStorageProvider.set(jobStorageKey(simulationId), cancelledJob);
+    publishPlatformEvent("JourneyCancelled", { simulationId });
+    return cancelledJob;
   }
   job.child?.kill("SIGKILL");
   job.child = undefined;
   job.status = "cancelled";
   job.message = "Simulacion cancelada.";
+  await persistJob(job);
   publishPlatformEvent("JourneyCancelled", { simulationId });
   return publicJob(job);
 }
 
 export function clearSimulationJobsForTests() {
   jobs.clear();
+}
+
+export async function removeSimulationJobForTests(simulationId: string) {
+  jobs.delete(simulationId);
+  await fileStorageProvider.remove(jobStorageKey(simulationId));
 }
 
 function applyProgressEvent(job: SimulationJob, event: { stage?: JourneyStage; progress?: number; message?: string }) {
@@ -82,43 +116,62 @@ function applyProgressEvent(job: SimulationJob, event: { stage?: JourneyStage; p
   job.stage = event.stage;
   job.progress = Math.max(job.progress, Math.min(event.progress ?? job.progress, 100));
   job.message = event.message || job.message;
+  void persistJob(job);
 }
 
-function completeJob(job: SimulationJob, parsed: JourneyProviderResult) {
+async function completeJob(job: SimulationJob, parsed: JourneyProviderResult) {
   if (job.status === "cancelled" || job.status === "error") {
     return;
   }
   if (!parsed.success) {
-    failJob(job, parsed.error || "No se pudo simular el escenario.");
+    await failJob(job, parsed.error || "No se pudo simular el escenario.");
     return;
   }
   if (!isSimulationResultContract(parsed.data)) {
-    failJob(job, simulationResultContractError(parsed.data));
+    await failJob(job, simulationResultContractError(parsed.data));
     return;
   }
-  job.status = "result";
-  job.stage = "completed";
-  job.progress = 100;
-  job.message = "La ruta esta lista.";
-  job.result = parsed.data;
-  job.completedAt = new Date().toISOString();
-  job.child = undefined;
+  const completedJob: SimulationJob = {
+    ...job,
+    status: "result",
+    stage: "completed",
+    progress: 100,
+    message: "La ruta esta lista.",
+    result: parsed.data,
+    completedAt: new Date().toISOString(),
+    child: undefined
+  };
+  await persistJob(completedJob);
+  Object.assign(job, completedJob);
   publishPlatformEvent("JourneyCompleted", { simulationId: job.id });
 }
 
-function failJob(job: SimulationJob, message: string) {
+async function failJob(job: SimulationJob, message: string) {
   if (job.status === "cancelled") {
     return;
   }
-  job.status = "error";
-  job.error = message;
-  job.message = message;
-  job.child = undefined;
-  job.completedAt = new Date().toISOString();
+  const failedJob: SimulationJob = {
+    ...job,
+    status: "error",
+    error: message,
+    message,
+    child: undefined,
+    completedAt: new Date().toISOString()
+  };
+  await persistJob(failedJob);
+  Object.assign(job, failedJob);
   publishPlatformEvent("JourneyFailed", { simulationId: job.id });
 }
 
 function publicJob(job: SimulationJob): PublicSimulationJob {
   const { child: _child, ...safeJob } = job;
   return safeJob;
+}
+
+function persistJob(job: SimulationJob) {
+  return fileStorageProvider.set(jobStorageKey(job.id), publicJob(job));
+}
+
+function jobStorageKey(simulationId: string) {
+  return `journey-simulation:${simulationId}`;
 }

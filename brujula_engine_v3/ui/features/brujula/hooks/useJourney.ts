@@ -157,6 +157,7 @@ export function useJourney() {
       return;
     }
 
+    storage.removeActiveJourneyId();
     throw new Error(job.error || job.message || "No se pudo completar la simulacion.");
   }
 
@@ -168,6 +169,7 @@ export function useJourney() {
         const message = err instanceof Error ? err.message : "No se pudo consultar el avance de la simulacion.";
         setError(message);
         setIsLoading(false);
+        storage.removeActiveJourneyId();
         setJourneyFlow({ status: "error", goal: journeyFlow.goal, simulationId: journeyFlow.simulationId, message, recoverable: true });
       });
     }, 1200);
@@ -248,6 +250,7 @@ export function useJourney() {
       const message = err instanceof Error ? err.message : "Error desconocido.";
       setError(message);
       setIsLoading(false);
+      storage.removeActiveJourneyId();
       setJourneyFlow({ status: "error", goal, simulationId, message, recoverable: true });
     }
   }

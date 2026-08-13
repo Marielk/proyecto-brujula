@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AIProvider } from "../platform/contracts";
 import { resetJourneyProvider, setJourneyProvider } from "../platform/ai-provider-registry";
-import { cancelSimulationJob, clearSimulationJobsForTests, getSimulationJob, startSimulationJob } from "./journey-simulation-store";
+import { fileStorageProvider } from "../platform/file-storage";
+import {
+  cancelSimulationJob,
+  clearSimulationJobsForTests,
+  getSimulationJob,
+  removeSimulationJobForTests,
+  startSimulationJob
+} from "./journey-simulation-store";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -11,9 +18,10 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-afterEach(() => {
+afterEach(async () => {
   resetJourneyProvider();
   clearSimulationJobsForTests();
+  await Promise.all(["sim_test", "sim_invalid", "sim_cancel", "sim_persisted", "sim_interrupted"].map((id) => removeSimulationJobForTests(id)));
 });
 
 describe("journey simulation store", () => {
@@ -30,15 +38,48 @@ describe("journey simulation store", () => {
     };
     setJourneyProvider(provider);
 
-    const started = startSimulationJob({ simulationId: "sim_test", text: "Quiero cambiar de ruta", model: "local", lifeProfile: null });
+    const started = await startSimulationJob({ simulationId: "sim_test", text: "Quiero cambiar de ruta", model: "local", lifeProfile: null });
 
     expect(started.status).toBe("loading");
     expect(started.stage).toBe("generating_strategies");
-    expect(getSimulationJob("sim_test")?.progress).toBe(35);
+    await expect(getSimulationJob("sim_test")).resolves.toMatchObject({ progress: 35 });
 
     result.resolve({ success: true, data: validResult });
-    await vi.waitFor(() => expect(getSimulationJob("sim_test")?.status).toBe("result"));
-    expect(getSimulationJob("sim_test")?.result).toEqual(validResult);
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_test"))?.status).toBe("result"));
+    expect((await getSimulationJob("sim_test"))?.result).toEqual(validResult);
+  });
+
+  it("recovers a terminal job snapshot after the in-memory map is cleared", async () => {
+    const validResult = createSimulationResult();
+    const provider: AIProvider = {
+      id: "persist-provider",
+      kind: "local",
+      runJourneySimulation: () => ({ result: Promise.resolve({ success: true, data: validResult }) })
+    };
+    setJourneyProvider(provider);
+
+    await startSimulationJob({ simulationId: "sim_persisted", text: "Persistir", model: "local", lifeProfile: null });
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_persisted"))?.status).toBe("result"));
+    clearSimulationJobsForTests();
+
+    await expect(getSimulationJob("sim_persisted")).resolves.toMatchObject({ status: "result", result: validResult });
+  });
+
+  it("marks a persisted loading job as interrupted when no process is active", async () => {
+    await fileStorageProvider.set("journey-simulation:sim_interrupted", {
+      id: "sim_interrupted",
+      status: "loading",
+      goal: "Destino",
+      stage: "comparing_paths",
+      progress: 90,
+      message: "Comparando",
+      createdAt: new Date().toISOString()
+    });
+
+    await expect(getSimulationJob("sim_interrupted")).resolves.toMatchObject({
+      status: "error",
+      error: "La simulacion fue interrumpida porque el proceso del servidor ya no esta activo."
+    });
   });
 
   it("rejects successful provider responses that do not match the result contract", async () => {
@@ -49,13 +90,13 @@ describe("journey simulation store", () => {
     };
     setJourneyProvider(provider);
 
-    startSimulationJob({ simulationId: "sim_invalid", text: "Destino", model: "local", lifeProfile: null });
+    await startSimulationJob({ simulationId: "sim_invalid", text: "Destino", model: "local", lifeProfile: null });
 
-    await vi.waitFor(() => expect(getSimulationJob("sim_invalid")?.status).toBe("error"));
-    expect(getSimulationJob("sim_invalid")?.error).toContain("Resultado de simulacion invalido");
+    await vi.waitFor(async () => expect((await getSimulationJob("sim_invalid"))?.status).toBe("error"));
+    expect((await getSimulationJob("sim_invalid"))?.error).toContain("Resultado de simulacion invalido");
   });
 
-  it("cancels an active job without exposing the child process", () => {
+  it("cancels an active job without exposing the child process", async () => {
     const kill = vi.fn();
     const provider: AIProvider = {
       id: "slow-provider",
@@ -64,8 +105,8 @@ describe("journey simulation store", () => {
     };
     setJourneyProvider(provider);
 
-    startSimulationJob({ simulationId: "sim_cancel", text: "Pausar", model: "local", lifeProfile: null });
-    const cancelled = cancelSimulationJob("sim_cancel");
+    await startSimulationJob({ simulationId: "sim_cancel", text: "Pausar", model: "local", lifeProfile: null });
+    const cancelled = await cancelSimulationJob("sim_cancel");
 
     expect(kill).toHaveBeenCalledWith("SIGKILL");
     expect(cancelled).toMatchObject({ status: "cancelled", message: "Simulacion cancelada." });

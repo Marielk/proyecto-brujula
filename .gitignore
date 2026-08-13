@@ -29,6 +29,8 @@ pnpm-debug.log*
 # Local runtime output
 logs/
 *.log
+.brujula/
+brujula_engine_v3/.brujula/
 
 # Environment and local settings
 .env

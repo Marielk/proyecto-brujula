@@ -7,7 +7,7 @@ type RouteContext = {
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const { simulationId } = await context.params;
-  const job = getSimulationJob(simulationId);
+  const job = await getSimulationJob(simulationId);
   if (!job) {
     return NextResponse.json({ success: false, error: "Simulación no encontrada." }, { status: 404 });
   }
@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const { simulationId } = await context.params;
-  const job = cancelSimulationJob(simulationId);
+  const job = await cancelSimulationJob(simulationId);
   if (!job) {
     return NextResponse.json({ success: false, error: "Simulación no encontrada." }, { status: 404 });
   }

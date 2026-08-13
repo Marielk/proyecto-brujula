@@ -15,6 +15,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Escribe un escenario para simular." }, { status: 400 });
   }
 
-  const job = startSimulationJob({ simulationId, text, model, lifeProfile });
+  const job = await startSimulationJob({ simulationId, text, model, lifeProfile });
   return NextResponse.json({ success: true, data: job }, { status: 202 });
 }
