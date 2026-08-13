@@ -7,6 +7,7 @@ import { isSimulationResultContract, simulationResultContractError } from "./jou
 
 type SimulationJob = PublicSimulationJob & {
   child?: ChildProcessWithoutNullStreams;
+  heartbeat?: NodeJS.Timeout;
 };
 
 type BrujulaSimulationGlobal = typeof globalThis & {
@@ -14,6 +15,9 @@ type BrujulaSimulationGlobal = typeof globalThis & {
 };
 
 const jobs = ((globalThis as BrujulaSimulationGlobal).__brujulaSimulationJobs ||= new Map<string, SimulationJob>());
+const INSTANCE_ID = `next_${process.pid}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+const HEARTBEAT_INTERVAL_MS = 5000;
+const HEARTBEAT_STALE_MS = 20000;
 
 export async function startSimulationJob({
   simulationId,
@@ -39,18 +43,26 @@ export async function startSimulationJob({
     stage: "understanding_goal",
     progress: 4,
     message: "Leyendo el destino y preparando la simulacion.",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    ownerId: INSTANCE_ID,
+    heartbeatAt: new Date().toISOString()
   };
   jobs.set(simulationId, job);
   await persistJob(job);
+  startHeartbeat(job);
   publishPlatformEvent("JourneyStarted", { simulationId, provider: provider.id });
 
-  const providerRun = provider.runJourneySimulation({ simulationId, text, model, lifeProfile }, (event) => {
-    applyProgressEvent(job, event);
-    publishPlatformEvent("JourneyProgressed", { simulationId, stage: event.stage, progress: event.progress });
-  });
-  job.child = providerRun.child as ChildProcessWithoutNullStreams | undefined;
-  providerRun.result.then((parsed) => void completeJob(job, parsed)).catch((error: Error) => void failJob(job, error.message));
+  try {
+    const providerRun = provider.runJourneySimulation({ simulationId, text, model, lifeProfile }, (event) => {
+      applyProgressEvent(job, event);
+      publishPlatformEvent("JourneyProgressed", { simulationId, stage: event.stage, progress: event.progress });
+    });
+    job.child = providerRun.child as ChildProcessWithoutNullStreams | undefined;
+    providerRun.result.then((parsed) => void completeJob(job, parsed)).catch((error: Error) => void failJob(job, error.message));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo iniciar el proveedor de simulacion.";
+    await failJob(job, message);
+  }
 
   return publicJob(job);
 }
@@ -66,6 +78,9 @@ export async function getSimulationJob(simulationId: string) {
     return null;
   }
   if (storedJob.status !== "loading") {
+    return storedJob;
+  }
+  if (hasFreshHeartbeat(storedJob)) {
     return storedJob;
   }
   const interruptedJob: PublicSimulationJob = {
@@ -92,6 +107,7 @@ export async function cancelSimulationJob(simulationId: string) {
     return cancelledJob;
   }
   job.child?.kill("SIGKILL");
+  stopHeartbeat(job);
   job.child = undefined;
   job.status = "cancelled";
   job.message = "Simulacion cancelada.";
@@ -101,6 +117,9 @@ export async function cancelSimulationJob(simulationId: string) {
 }
 
 export function clearSimulationJobsForTests() {
+  for (const job of jobs.values()) {
+    stopHeartbeat(job);
+  }
   jobs.clear();
 }
 
@@ -116,6 +135,7 @@ function applyProgressEvent(job: SimulationJob, event: { stage?: JourneyStage; p
   job.stage = event.stage;
   job.progress = Math.max(job.progress, Math.min(event.progress ?? job.progress, 100));
   job.message = event.message || job.message;
+  job.heartbeatAt = new Date().toISOString();
   void persistJob(job);
 }
 
@@ -139,8 +159,11 @@ async function completeJob(job: SimulationJob, parsed: JourneyProviderResult) {
     message: "La ruta esta lista.",
     result: parsed.data,
     completedAt: new Date().toISOString(),
+    heartbeatAt: new Date().toISOString(),
+    heartbeat: undefined,
     child: undefined
   };
+  stopHeartbeat(job);
   await persistJob(completedJob);
   Object.assign(job, completedJob);
   publishPlatformEvent("JourneyCompleted", { simulationId: job.id });
@@ -156,15 +179,18 @@ async function failJob(job: SimulationJob, message: string) {
     error: message,
     message,
     child: undefined,
+    heartbeatAt: new Date().toISOString(),
+    heartbeat: undefined,
     completedAt: new Date().toISOString()
   };
+  stopHeartbeat(job);
   await persistJob(failedJob);
   Object.assign(job, failedJob);
   publishPlatformEvent("JourneyFailed", { simulationId: job.id });
 }
 
 function publicJob(job: SimulationJob): PublicSimulationJob {
-  const { child: _child, ...safeJob } = job;
+  const { child: _child, heartbeat: _heartbeat, ...safeJob } = job;
   return safeJob;
 }
 
@@ -174,4 +200,30 @@ function persistJob(job: SimulationJob) {
 
 function jobStorageKey(simulationId: string) {
   return `journey-simulation:${simulationId}`;
+}
+
+function startHeartbeat(job: SimulationJob) {
+  stopHeartbeat(job);
+  job.heartbeat = setInterval(() => {
+    if (job.status !== "loading") {
+      stopHeartbeat(job);
+      return;
+    }
+    job.heartbeatAt = new Date().toISOString();
+    void persistJob(job);
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
+function stopHeartbeat(job: SimulationJob) {
+  if (job.heartbeat) {
+    clearInterval(job.heartbeat);
+    job.heartbeat = undefined;
+  }
+}
+
+function hasFreshHeartbeat(job: PublicSimulationJob) {
+  if (!job.ownerId || !job.heartbeatAt) {
+    return false;
+  }
+  return Date.now() - Date.parse(job.heartbeatAt) < HEARTBEAT_STALE_MS;
 }

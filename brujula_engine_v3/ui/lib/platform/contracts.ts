@@ -40,6 +40,8 @@ export type PublicSimulationJob = {
   progress: number;
   message: string;
   createdAt: string;
+  ownerId?: string;
+  heartbeatAt?: string;
   completedAt?: string;
   result?: unknown;
   error?: string;

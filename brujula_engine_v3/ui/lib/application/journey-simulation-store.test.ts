@@ -21,7 +21,11 @@ function deferred<T>() {
 afterEach(async () => {
   resetJourneyProvider();
   clearSimulationJobsForTests();
-  await Promise.all(["sim_test", "sim_invalid", "sim_cancel", "sim_persisted", "sim_interrupted"].map((id) => removeSimulationJobForTests(id)));
+  await Promise.all(
+    ["sim_test", "sim_invalid", "sim_cancel", "sim_persisted", "sim_interrupted", "sim_fresh", "sim_throw"].map((id) =>
+      removeSimulationJobForTests(id)
+    )
+  );
 });
 
 describe("journey simulation store", () => {
@@ -73,13 +77,47 @@ describe("journey simulation store", () => {
       stage: "comparing_paths",
       progress: 90,
       message: "Comparando",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ownerId: "stale-owner",
+      heartbeatAt: new Date(Date.now() - 60000).toISOString()
     });
 
     await expect(getSimulationJob("sim_interrupted")).resolves.toMatchObject({
       status: "error",
       error: "La simulacion fue interrumpida porque el proceso del servidor ya no esta activo."
     });
+  });
+
+  it("keeps a persisted loading job active when another owner has a fresh heartbeat", async () => {
+    await fileStorageProvider.set("journey-simulation:sim_fresh", {
+      id: "sim_fresh",
+      status: "loading",
+      goal: "Destino",
+      stage: "comparing_paths",
+      progress: 90,
+      message: "Comparando",
+      createdAt: new Date().toISOString(),
+      ownerId: "other-instance",
+      heartbeatAt: new Date().toISOString()
+    });
+
+    await expect(getSimulationJob("sim_fresh")).resolves.toMatchObject({ status: "loading", progress: 90 });
+  });
+
+  it("turns synchronous provider startup failures into controlled job errors", async () => {
+    const provider: AIProvider = {
+      id: "throwing-provider",
+      kind: "local",
+      runJourneySimulation: () => {
+        throw new Error("Proveedor no disponible");
+      }
+    };
+    setJourneyProvider(provider);
+
+    const started = await startSimulationJob({ simulationId: "sim_throw", text: "Destino", model: "local", lifeProfile: null });
+
+    expect(started).toMatchObject({ status: "error", error: "Proveedor no disponible" });
+    await expect(getSimulationJob("sim_throw")).resolves.toMatchObject({ status: "error", error: "Proveedor no disponible" });
   });
 
   it("rejects successful provider responses that do not match the result contract", async () => {

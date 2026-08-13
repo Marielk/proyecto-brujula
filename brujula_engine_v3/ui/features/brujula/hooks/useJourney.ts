@@ -64,6 +64,7 @@ export function useJourney() {
       if (activeSimulationId) {
         activeSimulationRef.current = activeSimulationId;
         void pollJourneyStatus(activeSimulationId).catch(() => {
+          storage.removeActiveJourneyId();
           setJourneyFlow((current) =>
             current.status === "loading"
               ? current
@@ -269,7 +270,6 @@ export function useJourney() {
     activeSimulationRef.current = "";
     storage.removeActiveJourneyId();
     setIsLoading(false);
-    storage.removeActiveJourneyId();
     setResult(null);
     setError("");
     setJourneyFlow((current) => ({ status: "input", goal: current.goal }));
