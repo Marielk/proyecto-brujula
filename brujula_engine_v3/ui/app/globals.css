@@ -3136,3 +3136,123 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 }
+
+.decisionScreen {
+  gap: 18px;
+}
+
+.decisionPanel {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 1040px;
+  width: 100%;
+}
+
+.decisionPanel h1,
+.decisionPanel h2 {
+  color: var(--book-sage);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.decisionChoiceGrid,
+.decisionFormGrid,
+.signalsGrid,
+.decisionHistoryList {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.decisionChoice {
+  align-items: start;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(75, 101, 71, 0.14);
+  border-radius: 18px;
+  color: var(--book-muted);
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  text-align: left;
+}
+
+.decisionChoice.selected {
+  border-color: rgba(75, 101, 71, 0.42);
+  box-shadow: 0 14px 34px rgba(75, 101, 71, 0.12);
+}
+
+.decisionChoice strong,
+.decisionHistoryItem h2 {
+  color: var(--v08-teal);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.decisionChoice small,
+.decisionChoice em,
+.reviewItem span,
+.decisionHistoryItem span {
+  color: var(--book-muted);
+  line-height: 1.35;
+}
+
+.decisionChoice em {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.decisionActionsEditor,
+.decisionChecklist {
+  display: grid;
+  gap: 12px;
+}
+
+.decisionChecklist label {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.46);
+  border-radius: 14px;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+}
+
+.signalsGrid p,
+.reviewItem,
+.decisionHistoryItem {
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(75, 101, 71, 0.12);
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.successNotice,
+.errorNotice {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.successNotice {
+  background: rgba(205, 235, 197, 0.46);
+  color: var(--book-sage);
+}
+
+.errorNotice {
+  background: rgba(150, 87, 96, 0.12);
+  color: var(--v08-mauve);
+}
+
+@media (max-width: 900px) {
+  .decisionChoiceGrid,
+  .decisionFormGrid,
+  .signalsGrid,
+  .decisionHistoryList {
+    grid-template-columns: 1fr;
+  }
+}

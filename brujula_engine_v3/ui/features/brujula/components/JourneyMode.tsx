@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
 import type { LifeProfile, SimulationResult } from "../../../lib/types";
@@ -83,6 +84,7 @@ export function JourneyMode({
         titleRef={resultTitleRef}
         onEditGoal={onEditGoal}
         onNewJourney={onNewJourney}
+        profile={profile}
       />
     );
   }
@@ -100,6 +102,7 @@ export function JourneyMode({
         <div className="journeyControls">
           <button type="submit" disabled={isLoading || !text.trim()}>{isLoading ? "Trazando ruta..." : "Trazar ruta"}</button>
           <button className="secondaryButton" type="button" onClick={onEditProfile}>Revisar Perfil de Vida</button>
+          <a className="secondaryButton" href="/viaje/historial">Historial</a>
         </div>
         <details className="technicalMode">
           <summary>Modo técnico</summary>
@@ -122,7 +125,7 @@ export function JourneyLoading({ flow, onCancel }: { flow: Extract<JourneyFlowSt
     <section className="journeyScreen journeyLoadingScreen" aria-busy="true">
       <div className="journeyLoading">
       <div className="loadingOrb" aria-hidden="true">
-        <img src="/assets/sue-mapa.png" alt="" />
+        <Image src="/assets/sue-mapa.png" alt="" width={240} height={240} sizes="180px" priority />
       </div>
       <h1>Brújula está explorando muchos futuros posibles.</h1>
       <p>Estamos recorriendo distintas rutas para encontrar aquella que mejor equilibra bienestar, propósito y posibilidades reales.</p>

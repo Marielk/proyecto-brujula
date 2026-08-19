@@ -48,6 +48,11 @@ export function useJourney() {
     }
     setCheckIn(storage.readDailyCheckIn());
     setRitualOutcome(storage.readRitualOutcome());
+    const pendingLearning = storage.readPendingLearningContext();
+    if (pendingLearning) {
+      setText((current) => `${current.trim()}${pendingLearning}`.trim());
+      storage.removePendingLearningContext();
+    }
   }, [storage]);
 
   useEffect(() => {

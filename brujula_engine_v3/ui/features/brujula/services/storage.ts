@@ -6,6 +6,7 @@ import {
   JOURNEY_RESULTS_STORAGE_KEY,
   LEGACY_JOURNEY_RESULTS_STORAGE_KEY,
   OUTCOME_STORAGE_KEY,
+  PENDING_LEARNING_STORAGE_KEY,
   STORAGE_KEY,
   type JourneyFlowState,
   type StoredJourneyResult,
@@ -79,6 +80,18 @@ export function writeActiveJourneyId(simulationId: string) {
 
 export function removeActiveJourneyId() {
   safeLocalStorage()?.removeItem(ACTIVE_JOURNEY_STORAGE_KEY);
+}
+
+export function readPendingLearningContext() {
+  return safeLocalStorage()?.getItem(PENDING_LEARNING_STORAGE_KEY) || "";
+}
+
+export function writePendingLearningContext(context: string) {
+  safeLocalStorage()?.setItem(PENDING_LEARNING_STORAGE_KEY, context);
+}
+
+export function removePendingLearningContext() {
+  safeLocalStorage()?.removeItem(PENDING_LEARNING_STORAGE_KEY);
 }
 
 export function readStoredJourneyResults(): StoredJourneyResults {

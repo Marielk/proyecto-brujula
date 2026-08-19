@@ -1,7 +1,9 @@
 "use client";
 
 import type { SimulationResult } from "../../../lib/types";
+import type { LifeProfile } from "../../../lib/types";
 import { formatSimulationDate } from "../model";
+import { DecisionFlow } from "./DecisionFlow";
 import {
   domainLabel,
   effortFromResult,
@@ -24,7 +26,8 @@ export function JourneyResults({
   completedAt,
   titleRef,
   onEditGoal,
-  onNewJourney
+  onNewJourney,
+  profile
 }: {
   result: SimulationResult;
   goal: string;
@@ -33,6 +36,7 @@ export function JourneyResults({
   titleRef: { current: HTMLHeadingElement | null };
   onEditGoal: () => void;
   onNewJourney: () => void;
+  profile: LifeProfile;
 }) {
   const guidance = result.lifeReport.journeyGuidance || fallbackJourneyGuidance(result);
   const selectedPath = guidance.selectedPath || result.selectedPath;
@@ -59,6 +63,7 @@ export function JourneyResults({
         <div className="resultActions">
           <button type="button" onClick={onNewJourney}>Trazar un nuevo viaje</button>
           <button className="secondaryButton" type="button" onClick={onEditGoal}>Editar este destino</button>
+          <a className="secondaryButton" href="/viaje/historial">Historial de decisiones</a>
         </div>
         <div className="resultMetaGrid">
           <div><span>Destino simulado</span><strong>{goal}</strong></div>
@@ -87,6 +92,8 @@ export function JourneyResults({
           </div>
         </details>
       </article>
+
+      <DecisionFlow simulationId={simulationId} initialResult={result} initialGoal={goal} profile={profile} />
 
       {comparisonPaths.length > 1 && (
         <section className="pathComparisonBoard glassPanel">
@@ -395,4 +402,3 @@ export function JourneyResults({
     </section>
   );
 }
-

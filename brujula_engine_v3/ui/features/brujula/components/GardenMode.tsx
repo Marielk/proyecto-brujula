@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { DailyCheckIn, GardenIndicator, GardenNeed, GardenTime, RitualOutcome, RitualRecommendation } from "../../../lib/types";
 import { ChoicePanel, RangeControl } from "./SharedControls";
 import { gardenNeedLabel } from "./garden-utils";
@@ -63,7 +64,7 @@ export function GardenMode({
           </label>
 
           <section className="ritualHero">
-            <img src="/assets/ritual-tea-garden.png" alt="Bebida caliente en un jardín sereno" />
+            <Image src="/assets/ritual-tea-garden.png" alt="Bebida caliente en un jardín sereno" width={420} height={280} sizes="(max-width: 900px) 100vw, 420px" />
             <div>
               <span>Ritual recomendado</span>
               <h2>{recommendation.ritual.title}</h2>

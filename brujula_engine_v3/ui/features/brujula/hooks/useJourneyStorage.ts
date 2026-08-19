@@ -6,13 +6,16 @@ import type { StoredJourneyResult } from "../model";
 import {
   readDailyCheckIn,
   readActiveJourneyId,
+  readPendingLearningContext,
   readLifeProfile,
   readRitualOutcome,
   readStoredJourneyResults,
   removeLifeProfile,
   removeActiveJourneyId,
+  removePendingLearningContext,
   removeStoredJourneyResult,
   writeActiveJourneyId,
+  writePendingLearningContext,
   writeDailyCheckIn,
   writeLifeProfile,
   writeRitualOutcome,
@@ -30,6 +33,9 @@ export function useJourneyStorage() {
   const readActiveJourneyIdAction = useCallback(() => readActiveJourneyId(), []);
   const writeActiveJourneyIdAction = useCallback((simulationId: string) => writeActiveJourneyId(simulationId), []);
   const removeActiveJourneyIdAction = useCallback(() => removeActiveJourneyId(), []);
+  const readPendingLearningContextAction = useCallback(() => readPendingLearningContext(), []);
+  const writePendingLearningContextAction = useCallback((context: string) => writePendingLearningContext(context), []);
+  const removePendingLearningContextAction = useCallback(() => removePendingLearningContext(), []);
   const readStoredJourneyResultsAction = useCallback(() => readStoredJourneyResults(), []);
   const writeStoredJourneyResultAction = useCallback((result: StoredJourneyResult) => writeStoredJourneyResult(result), []);
   const removeStoredJourneyResultAction = useCallback((simulationId?: string) => removeStoredJourneyResult(simulationId), []);
@@ -46,6 +52,9 @@ export function useJourneyStorage() {
       readActiveJourneyId: readActiveJourneyIdAction,
       writeActiveJourneyId: writeActiveJourneyIdAction,
       removeActiveJourneyId: removeActiveJourneyIdAction,
+      readPendingLearningContext: readPendingLearningContextAction,
+      writePendingLearningContext: writePendingLearningContextAction,
+      removePendingLearningContext: removePendingLearningContextAction,
       readStoredJourneyResults: readStoredJourneyResultsAction,
       writeStoredJourneyResult: writeStoredJourneyResultAction,
       removeStoredJourneyResult: removeStoredJourneyResultAction
@@ -55,13 +64,16 @@ export function useJourneyStorage() {
       readLifeProfileAction,
       readActiveJourneyIdAction,
       readRitualOutcomeAction,
+      readPendingLearningContextAction,
       readStoredJourneyResultsAction,
       removeLifeProfileAction,
       removeActiveJourneyIdAction,
       removeStoredJourneyResultAction,
+      removePendingLearningContextAction,
       writeActiveJourneyIdAction,
       writeDailyCheckInAction,
       writeLifeProfileAction,
+      writePendingLearningContextAction,
       writeRitualOutcomeAction,
       writeStoredJourneyResultAction
     ]

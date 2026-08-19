@@ -64,7 +64,26 @@ export type StorageProvider = {
 };
 
 export type PlatformEvent = {
-  name: "JourneyStarted" | "JourneyProgressed" | "JourneyCompleted" | "JourneyCancelled" | "JourneyFailed" | "ProfileChanged" | "GardenUpdated";
+  name:
+    | "JourneyStarted"
+    | "JourneyProgressed"
+    | "JourneyCompleted"
+    | "JourneyCancelled"
+    | "JourneyFailed"
+    | "ProfileChanged"
+    | "GardenUpdated"
+    | "DecisionDraftStarted"
+    | "PathSelected"
+    | "ExperimentGenerated"
+    | "ExperimentEdited"
+    | "DecisionPlanned"
+    | "DecisionStarted"
+    | "ReviewOpened"
+    | "ReviewCompleted"
+    | "DecisionContinued"
+    | "DecisionAdjusted"
+    | "DecisionStopped"
+    | "JourneyResimulatedFromLearning";
   createdAt: string;
   properties?: Record<string, string | number | boolean | null>;
 };
